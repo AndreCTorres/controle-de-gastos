@@ -25,12 +25,12 @@
 
     <!-- tabs -->
     <div class="auth-tabs">
-      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Entrar</button>
-      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Criar conta</button>
+      <button class="auth-tab active" id="tabLogin">Entrar</button>
+      <button class="auth-tab" id="tabSignup">Criar conta</button>
     </div>
 
     <!-- login form -->
-    <form id="loginForm" class="auth-form" onsubmit="handleLogin(event)">
+    <form id="loginForm" class="auth-form">
       <div class="auth-field">
         <label>E-mail</label>
         <input type="email" id="loginEmail" placeholder="seu@email.com" required autocomplete="email">
@@ -44,7 +44,7 @@
     </form>
 
     <!-- signup form -->
-    <form id="signupForm" class="auth-form" style="display:none" onsubmit="handleSignup(event)">
+    <form id="signupForm" class="auth-form" style="display:none">
       <div class="auth-field">
         <label>Seu nome</label>
         <input type="text" id="signupName" placeholder="Como quer ser chamado?" required autocomplete="name">

@@ -19,7 +19,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 
 /* ── AUTH ── */
 .auth-screen{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  min-height:100vh;
+  height:100vh;
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
   background:var(--bg);padding:24px;
 }
 .auth-card{
