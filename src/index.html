@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Gastos</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233D5A80' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12V7H5a2 2 0 0 1 0-4h14v4'/%3E%3Cpath d='M3 5v14a2 2 0 0 0 2 2h16v-5'/%3E%3Cpath d='M18 12a2 2 0 0 0 0 4h4v-4z'/%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ── AUTH SCREEN ── -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
+      </svg>
+    </div>
+    <h1 class="auth-title">Controle de Gastos</h1>
+    <p class="auth-sub">Finanças pessoais, simples e eficiente.</p>
+
+    <!-- tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Entrar</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Criar conta</button>
+    </div>
+
+    <!-- login form -->
+    <form id="loginForm" class="auth-form" onsubmit="handleLogin(event)">
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seu@email.com" required autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Senha</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+      <div id="loginError" class="auth-error" style="display:none"></div>
+      <button type="submit" class="auth-btn" id="loginBtn">Entrar</button>
+    </form>
+
+    <!-- signup form -->
+    <form id="signupForm" class="auth-form" style="display:none" onsubmit="handleSignup(event)">
+      <div class="auth-field">
+        <label>Seu nome</label>
+        <input type="text" id="signupName" placeholder="Como quer ser chamado?" required autocomplete="name">
+      </div>
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="signupEmail" placeholder="seu@email.com" required autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Senha</label>
+        <input type="password" id="signupPassword" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password">
+      </div>
+      <div id="signupError" class="auth-error" style="display:none"></div>
+      <button type="submit" class="auth-btn" id="signupBtn">Criar conta</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── APP SCREEN ── -->
+<div id="appScreen" style="display:none">
+
+<div class="header">
+  <div class="header-left">
+    <span class="header-greeting" id="headerGreeting"></span>
+    <div class="header-sep"></div>
+    <button class="header-logout-btn" id="logoutBtn" onclick="handleLogout()" title="Sair">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
+    </button>
+  </div>
+  <div class="header-center">
+    <div style="display:flex;align-items:center;gap:9px;justify-content:center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
+      </svg>
+      <h1>Controle de Gastos</h1>
+    </div>
+    <div class="header-sub">Finanças pessoais</div>
+  </div>
+  <div class="header-right">
+    <div class="month-chip" id="monthChip" onclick="toggleMonthDropdown()">
+      <span class="month-chip-label">Mês</span>
+      <span class="month-chip-value" id="monthChipValue">—</span>
+      <span class="month-chip-arrow">▾</span>
+      <div class="month-dropdown" id="monthDropdown"></div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="income-banner">
+    <div class="income-top">
+      <div class="income-left">
+        <div class="income-section-label">Rendas do mês</div>
+        <div class="income-rows" id="income-rows"></div>
+        <div class="income-actions-row">
+          <button class="add-income-btn" onclick="addIncomeRow()">+ Adicionar renda adicional</button>
+          <button class="copy-month-btn" onclick="openCopyModal()">↩ Copiar mês anterior</button>
+        </div>
+      </div>
+      <div class="income-stats">
+        <div class="stat-pill"><label>Renda total</label><div class="val neu" id="stat-renda">R$ 0,00</div></div>
+        <div class="stat-pill"><label>Despesas</label><div class="val neu" id="stat-despesas">R$ 0,00</div></div>
+        <div class="stat-pill"><label>Saldo</label><div class="val neu" id="stat-saldo">R$ 0,00</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-row">
+    <div class="chart-card">
+      <div class="chart-card-title">Distribuição de Despesas</div>
+      <div class="chart-wrap">
+        <canvas id="donutChart" width="180" height="180"></canvas>
+        <div class="chart-center">
+          <div class="chart-center-label">total</div>
+          <div class="chart-center-val" id="chart-total">R$ 0,00</div>
+        </div>
+      </div>
+      <div class="chart-legend" id="chart-legend"></div>
+    </div>
+    <div class="categories-pct">
+      <div class="categories-pct-title">% da renda por categoria</div>
+      <div id="pct-list"></div>
+    </div>
+  </div>
+
+  <div id="sections-container"></div>
+
+  <div style="display:flex;justify-content:center;gap:10px;padding:4px 0 0">
+    <button class="new-section-btn" onclick="openNewSectionModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nova categoria
+    </button>
+    <button class="new-section-btn" onclick="openParcelModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      Compra parcelada
+    </button>
+  </div>
+
+  <div style="padding-bottom:8px"></div>
+</div>
+
+<footer class="app-footer">
+  <span>© <span id="footer-year"></span> André Torres</span>
+  <span class="footer-sep">·</span>
+  <span>Controle de Gastos Pessoais</span>
+  <span class="footer-sep">·</span>
+  <span>Todos os direitos reservados</span>
+</footer>
+
+<!-- CSV floating button -->
+<div class="csv-fab" id="csvFab">
+  <div class="csv-menu" id="csvMenu">
+    <button class="csv-menu-item" onclick="exportCSV();closeCsvMenu()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span>Exportar CSV</span>
+    </button>
+    <button class="csv-menu-item" onclick="triggerImport();closeCsvMenu()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span>Importar CSV</span>
+    </button>
+  </div>
+  <button class="csv-fab-btn" id="csvFabBtn" onclick="toggleCsvMenu()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    CSV
+  </button>
+</div>
+<input type="file" id="csvFileInput" accept=".csv" style="display:none">
+
+<!-- Modal: Compra parcelada -->
+<div class="modal-overlay" id="parcelModal">
+  <div class="modal" style="width:460px">
+    <div class="modal-header">
+      <div class="modal-title">Compra parcelada</div>
+      <button class="modal-close" onclick="closeParcelModal()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);display:block;margin-bottom:6px">Descrição</label>
+        <input id="parcelTitle" type="text" placeholder="Ex: TV Samsung, Notebook…" class="modal-input"
+          onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);display:block;margin-bottom:6px">Valor total (R$)</label>
+          <input id="parcelTotal" type="number" placeholder="0,00" step="0.01" min="0" class="modal-input"
+            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'"
+            oninput="updateParcelPreview()">
+        </div>
+        <div>
+          <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);display:block;margin-bottom:6px">Nº de parcelas</label>
+          <input id="parcelCount" type="number" placeholder="Ex: 12" min="2" max="60" step="1" class="modal-input"
+            onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'"
+            oninput="updateParcelPreview()">
+        </div>
+      </div>
+      <div id="parcelPreview" style="background:var(--primary-light);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--primary);font-weight:500;display:none">
+        <span id="parcelPreviewText"></span>
+      </div>
+      <div>
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);display:block;margin-bottom:8px">Categoria</label>
+        <div id="parcelSectionOptions" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn-secondary" onclick="closeParcelModal()">Cancelar</button>
+      <button class="modal-btn-primary" onclick="confirmParcel()">Adicionar parcelas</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nova categoria -->
+<div class="modal-overlay" id="newSectionModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Nova categoria</div>
+      <button class="modal-close" onclick="closeNewSectionModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-desc">Dê um nome para a categoria e adicione os itens iniciais.</p>
+      <div style="margin-bottom:14px">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);display:block;margin-bottom:6px">Nome da categoria</label>
+        <input id="newSectionTitle" type="text" placeholder="Ex: Educação, Pets, Presentes…" class="modal-input"
+          onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+      </div>
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);display:block;margin-bottom:6px">Itens iniciais</label>
+      <div id="newSectionItems" style="display:flex;flex-direction:column;gap:6px"></div>
+      <button onclick="addNewSectionItem()" class="add-item-btn">+ Adicionar item</button>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn-secondary" onclick="closeNewSectionModal()">Cancelar</button>
+      <button class="modal-btn-primary" onclick="confirmNewSection()">Criar categoria</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Copiar mês -->
+<div class="modal-overlay" id="copyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Copiar do mês anterior</div>
+      <button class="modal-close" onclick="closeCopyModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-desc">Selecione o que deseja trazer para <strong id="copyTargetMonth"></strong>:</p>
+      <div class="copy-options" id="copyOptions"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn-secondary" onclick="closeCopyModal()">Cancelar</button>
+      <button class="modal-btn-primary" onclick="confirmCopy()">Copiar selecionados</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /appScreen -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- App modules -->
+<script type="module" src="js/config.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/db.js"></script>
+<script type="module" src="js/app.js"></script>
+
+</body>
+</html>

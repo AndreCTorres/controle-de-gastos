@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Excel / local files (keep only src/)
+*.xlsx
+controle_gastos.html
