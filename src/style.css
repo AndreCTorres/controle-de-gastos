@@ -30,7 +30,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   box-shadow:0 8px 32px rgba(0,0,0,0.09);
   padding:36px 32px;width:100%;max-width:400px;
   display:flex;flex-direction:column;align-items:center;gap:0;
+  max-height:calc(100vh - 48px);
+  overflow-y:auto;
+  scrollbar-width:none;
 }
+.auth-card::-webkit-scrollbar{display:none;}
 .auth-logo{
   width:52px;height:52px;background:var(--primary-light);border-radius:14px;
   display:flex;align-items:center;justify-content:center;margin-bottom:16px;
