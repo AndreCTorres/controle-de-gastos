@@ -240,39 +240,44 @@ document.addEventListener('click', function(e) {
 // ── CSV FAB scroll visibility ──
 
 (function() {
-  const fab        = document.getElementById('csvFab');
-  const feedbackFab = document.getElementById('feedbackFab');
   function checkScroll() {
+    const fab         = document.getElementById('csvFab');
+    const feedbackFab = document.getElementById('feedbackFab');
+    if (!fab || !feedbackFab) return;
+
     const scrolled = window.scrollY + window.innerHeight;
     const total    = document.documentElement.scrollHeight;
     if (total - scrolled < 120) {
-      fab.style.opacity              = '1';
-      fab.style.pointerEvents        = 'all';
-      feedbackFab.style.opacity      = '1';
+      fab.style.opacity               = '1';
+      fab.style.pointerEvents         = 'all';
+      feedbackFab.style.opacity       = '1';
       feedbackFab.style.pointerEvents = 'all';
     } else {
-      fab.style.opacity              = '0';
-      fab.style.pointerEvents        = 'none';
-      feedbackFab.style.opacity      = '0';
+      fab.style.opacity               = '0';
+      fab.style.pointerEvents         = 'none';
+      feedbackFab.style.opacity       = '0';
       feedbackFab.style.pointerEvents = 'none';
-      window.closeCsvMenu();
+      window.closeCsvMenu?.();
       window.closeFeedbackMenu?.();
     }
   }
   window.addEventListener('scroll', checkScroll, { passive: true });
-  checkScroll();
+  // Expõe para o initApp poder disparar a verificação após o login
+  window._checkFabScroll = checkScroll;
 })();
 
 // ── Footer year ──
-document.getElementById('footer-year').textContent = new Date().getFullYear();
+// (definido em initApp para garantir que o elemento existe e está visível)
 
 // ── App bootstrap ──
 // Called by auth.js after session is confirmed.
 export async function initApp(user) {
+  document.getElementById('footer-year').textContent = new Date().getFullYear();
   await populateMonths();
   state.yearGoals = (await loadYearGoals(state.currentYear)) || {};
   await loadMonth();
   initFeedbackWidget();
+  window._checkFabScroll?.();
   await checkForUpdates(user);
   await maybeShowWelcome(user);
 }
