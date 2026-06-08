@@ -8,3 +8,6 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    # Permite carregar o SDK do Supabase via CDN (jsdelivr) e conectar à API do Supabase.
+    # 'self' cobre os módulos JS locais. unsafe-inline é necessário para os estilos inline do app.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; frame-ancestors 'none'"

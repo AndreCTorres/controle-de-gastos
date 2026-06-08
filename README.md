@@ -12,15 +12,33 @@ Stack: HTML + CSS + JS vanilla → Supabase (banco + auth) → Netlify (hospedag
 │   ├── index.html        # HTML principal
 │   ├── style.css         # Todos os estilos
 │   └── js/
-│       ├── config.js     # Credenciais do Supabase (preencher antes de subir)
+│       ├── config.js     # Credenciais do Supabase
 │       ├── auth.js       # Login, cadastro, logout, session listener
 │       ├── db.js         # Funções de leitura/escrita no Supabase
 │       └── app.js        # Toda a lógica da aplicação
 ├── supabase/
-│   └── schema.sql        # SQL para criar a tabela e políticas de segurança
-├── netlify.toml          # Configuração de deploy no Netlify
+│   ├── schema.sql        # Tabela principal (months) + RLS
+│   ├── goals.sql         # Tabela de metas mensais (monthly_goals) + RLS
+│   ├── updates.sql       # Tabela de notificações de atualização (app_updates) + RLS
+│   └── email-confirm.html  # Template customizado de confirmação de e-mail
+├── netlify.toml          # Configuração de deploy e headers de segurança
 └── .gitignore
 ```
+
+---
+
+## Funcionalidades
+
+- **Autenticação completa** — cadastro, login, logout, recuperação de senha
+- **Dados isolados por usuário** via Row Level Security (RLS) no Supabase
+- **Categorias de despesa** personalizáveis com subtotais e barra de progresso
+- **Múltiplas fontes de renda** por mês
+- **Compras parceladas** — distribui automaticamente as parcelas nos meses seguintes
+- **Copiar do mês anterior** — reaproveita rendas e categorias com um clique
+- **Metas mensais** — define limite de gasto por categoria com indicador visual de progresso
+- **Relatório anual** — sumário do ano, gráfico de barras e tabela de despesas × meses
+- **Export CSV / PDF** e **import CSV**
+- **Notificações de atualização** — modal exibido uma única vez quando há novidade
 
 ---
 
@@ -28,60 +46,65 @@ Stack: HTML + CSS + JS vanilla → Supabase (banco + auth) → Netlify (hospedag
 
 ### 1. Supabase
 
-1. Acesse [supabase.com](https://supabase.com) e crie uma conta
-2. Crie um novo projeto (anote a senha do banco)
-3. Vá em **SQL Editor → New Query**, cole o conteúdo de `supabase/schema.sql` e execute
-4. Vá em **Project Settings → API**:
-   - Copie a **Project URL**
-   - Copie a **anon public key**
-5. Abra `src/js/config.js` e substitua:
+1. Acesse [supabase.com](https://supabase.com) e crie um projeto
+2. No **SQL Editor**, execute os arquivos na ordem:
+   - `supabase/schema.sql` — tabela principal de dados mensais
+   - `supabase/goals.sql` — tabela de metas mensais
+   - `supabase/updates.sql` — tabela de notificações (opcional)
+3. Vá em **Project Settings → API** e copie:
+   - **Project URL**
+   - **anon public key**
+4. Abra `src/js/config.js` e substitua os valores:
    ```js
    export const SUPABASE_URL      = 'SUA_PROJECT_URL';
    export const SUPABASE_ANON_KEY = 'SUA_ANON_KEY';
    ```
 
+> **Segurança:** a `anon key` do Supabase é pública por design — pode ficar no código.
+> A proteção real dos dados é feita pelo Row Level Security (RLS), que garante que cada
+> usuário só acessa os próprios registros.
+
 ### 2. GitHub
 
-1. Crie um repositório no GitHub (pode ser privado)
-2. Suba os arquivos:
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
-   git push -u origin main
-   ```
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
+git push -u origin main
+```
 
 ### 3. Netlify
 
-1. Acesse [netlify.com](https://netlify.com) e crie uma conta
-2. Clique em **Add new site → Import an existing project**
-3. Conecte ao GitHub e selecione o repositório
-4. As configurações de build são detectadas automaticamente via `netlify.toml`:
+1. Acesse [netlify.com](https://netlify.com) → **Add new site → Import an existing project**
+2. Conecte ao GitHub e selecione o repositório
+3. O `netlify.toml` configura automaticamente:
    - **Publish directory:** `src`
-5. Clique em **Deploy site**
+   - **Security headers** (X-Frame-Options, CSP, etc.)
+4. Clique em **Deploy site**
 
-Pronto. A cada `git push` na branch `main`, o Netlify atualiza o site automaticamente.
-
----
-
-## Variáveis de ambiente (opcional — mais seguro)
-
-Em vez de deixar as credenciais no `config.js`, você pode usar variáveis de ambiente no Netlify:
-
-1. No Netlify: **Site settings → Environment variables**
-2. Adicione:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-3. Atualize o `config.js` para ler essas variáveis (requer um step de build)
-
-> Para o setup atual (HTML estático sem bundler), deixar no `config.js` é seguro —  
-> a `anon key` do Supabase é pública por design, e a segurança real vem do Row Level Security (RLS).
+A cada `git push` na branch `main` o Netlify atualiza o site automaticamente.
 
 ---
 
 ## Autenticação
 
 - Cadastro com e-mail + senha
-- Confirmação de e-mail (configurável no Supabase em **Authentication → Email Templates**)
-- Para desativar a confirmação em desenvolvimento: **Authentication → Providers → Email → Disable email confirmations**
+- Confirmação de e-mail obrigatória por padrão
+- Template customizado em `supabase/email-confirm.html`
+- Para desativar confirmação em desenvolvimento: **Authentication → Providers → Email → Disable email confirmations**
+
+---
+
+## Publicar uma notificação de atualização
+
+Insira um registro na tabela `app_updates` com `published = true`. Cada usuário verá o modal uma única vez:
+
+```sql
+insert into public.app_updates (title, body, published)
+values (
+  'Título da novidade',
+  'Descrição do que foi adicionado ou melhorado.',
+  true
+);
+```

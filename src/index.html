@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body style="overflow:hidden">
 
 <!-- ── AUTH SCREEN ── -->
 <div id="authScreen" class="auth-screen">
@@ -41,6 +41,21 @@
       </div>
       <div id="loginError" class="auth-error" style="display:none"></div>
       <button type="submit" class="auth-btn" id="loginBtn">Entrar</button>
+      <button type="button" class="auth-forgot-btn" id="forgotBtn">Esqueci minha senha</button>
+    </form>
+
+    <!-- forgot password form -->
+    <form id="forgotForm" class="auth-form" style="display:none">
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:4px">
+        Digite seu e-mail e enviaremos um link para redefinir sua senha.
+      </p>
+      <div class="auth-field">
+        <label>E-mail</label>
+        <input type="email" id="forgotEmail" placeholder="seu@email.com" required autocomplete="email">
+      </div>
+      <div id="forgotError" class="auth-error" style="display:none"></div>
+      <button type="submit" class="auth-btn" id="forgotSubmitBtn">Enviar link</button>
+      <button type="button" class="auth-forgot-btn" id="backToLoginBtn">← Voltar ao login</button>
     </form>
 
     <!-- signup form -->
@@ -69,11 +84,6 @@
 <div class="header">
   <div class="header-left">
     <span class="header-greeting" id="headerGreeting"></span>
-    <div class="header-sep"></div>
-    <button class="header-logout-btn" id="logoutBtn" onclick="handleLogout()" title="Sair">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Sair
-    </button>
   </div>
   <div class="header-center">
     <div style="display:flex;align-items:center;gap:9px;justify-content:center">
@@ -93,6 +103,11 @@
       <span class="month-chip-arrow">▾</span>
       <div class="month-dropdown" id="monthDropdown"></div>
     </div>
+    <div class="header-sep"></div>
+    <button class="header-logout-btn" id="logoutBtn" onclick="handleLogout()" title="Sair">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sair
+    </button>
   </div>
 </div>
 
@@ -136,7 +151,7 @@
 
   <div id="sections-container"></div>
 
-  <div style="display:flex;justify-content:center;gap:10px;padding:4px 0 0">
+  <div style="display:flex;justify-content:center;gap:10px;padding:4px 0 0;flex-wrap:wrap">
     <button class="new-section-btn" onclick="openNewSectionModal()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Nova categoria
@@ -144,6 +159,14 @@
     <button class="new-section-btn" onclick="openParcelModal()">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
       Compra parcelada
+    </button>
+    <button class="new-section-btn" onclick="openGoalsModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      Metas do mês
+    </button>
+    <button class="new-section-btn" onclick="openYearReport()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Relatório anual
     </button>
   </div>
 
@@ -158,21 +181,28 @@
   <span>Todos os direitos reservados</span>
 </footer>
 
-<!-- CSV floating button -->
+<!-- Exportar floating button -->
 <div class="csv-fab" id="csvFab">
   <div class="csv-menu" id="csvMenu">
+    <div class="csv-menu-group-label">Exportar</div>
     <button class="csv-menu-item" onclick="exportCSV();closeCsvMenu()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span>Exportar CSV</span>
     </button>
+    <button class="csv-menu-item" onclick="exportPDF();closeCsvMenu()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span>Exportar PDF</span>
+    </button>
+    <div class="csv-menu-divider"></div>
+    <div class="csv-menu-group-label">Importar</div>
     <button class="csv-menu-item" onclick="triggerImport();closeCsvMenu()">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       <span>Importar CSV</span>
     </button>
   </div>
   <button class="csv-fab-btn" id="csvFabBtn" onclick="toggleCsvMenu()">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-    CSV
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Arquivos
   </button>
 </div>
 <input type="file" id="csvFileInput" accept=".csv" style="display:none">
@@ -206,6 +236,9 @@
       </div>
       <div id="parcelPreview" style="background:var(--primary-light);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--primary);font-weight:500;display:none">
         <span id="parcelPreviewText"></span>
+      </div>
+      <div id="parcelOverflowWarn" style="background:#FDF8E4;border:1px solid #E8D97A;border-radius:8px;padding:10px 14px;font-size:12px;color:#7A6010;display:none">
+        ⚠ Algumas parcelas vão além de <strong id="parcelOverflowYear"></strong>. Elas serão salvas normalmente e aparecerão no seletor de meses quando você chegar nesse período.
       </div>
       <div>
         <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);display:block;margin-bottom:8px">Categoria</label>
@@ -262,7 +295,201 @@
   </div>
 </div>
 
+<!-- Modal: Metas mensais -->
+<div class="modal-overlay" id="goalsModal">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Metas do mês</div>
+      <button class="modal-close" onclick="closeGoalsModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-desc">Defina um limite de gasto para cada categoria. Um indicador de progresso aparecerá nos cards quando a meta for configurada.</p>
+      <div id="goalsModalBody" style="display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto;padding-right:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn-secondary" onclick="closeGoalsModal()">Cancelar</button>
+      <button class="modal-btn-primary" onclick="confirmGoals()">Salvar metas</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Importar CSV -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="width:min(560px,94vw)">
+    <div class="modal-header">
+      <div class="modal-title">Importar CSV</div>
+      <button class="modal-close" onclick="closeImportModal()">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:18px">
+
+      <!-- Passo 1: Instruções -->
+      <div id="importStep1">
+        <p class="modal-desc" style="margin-bottom:12px">
+          Você pode importar dados de uma planilha existente (Google Sheets, Excel ou qualquer outra)
+          convertendo-a para o formato CSV que o app entende.
+        </p>
+
+        <div class="import-step-block">
+          <div class="import-step-num">1</div>
+          <div>
+            <div class="import-step-title">Abra sua planilha</div>
+            <div class="import-step-desc">Pode ser Google Sheets, Excel, Numbers ou qualquer app de planilha.</div>
+          </div>
+        </div>
+
+        <div class="import-step-block">
+          <div class="import-step-num">2</div>
+          <div>
+            <div class="import-step-title">Use o prompt abaixo com uma IA</div>
+            <div class="import-step-desc">Copie o texto abaixo, cole em ChatGPT, Gemini ou outra IA — junto com os seus dados da planilha. A IA vai converter para o formato correto.</div>
+          </div>
+        </div>
+
+        <div class="import-prompt-box">
+          <div class="import-prompt-label">
+            <span>Prompt para IA</span>
+            <button class="import-copy-btn" id="importCopyBtn" onclick="copyImportPrompt()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copiar
+            </button>
+          </div>
+          <pre class="import-prompt-text" id="importPromptText"></pre>
+        </div>
+
+        <div class="import-step-block" style="margin-top:0">
+          <div class="import-step-num">3</div>
+          <div>
+            <div class="import-step-title">Copie o CSV gerado pela IA</div>
+            <div class="import-step-desc">A IA vai retornar um bloco de texto em formato CSV. Salve como arquivo <code>.csv</code> ou cole diretamente no campo abaixo.</div>
+          </div>
+        </div>
+
+        <div>
+          <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);display:block;margin-bottom:6px">Cole o CSV aqui ou carregue um arquivo</label>
+          <textarea id="importCsvTextarea" class="import-textarea" placeholder="Renda principal;3500,00&#10;&#10;Supermercado;color:#2D6A4F;bg:#E8F5EE&#10;Alimentos;320,50&#10;…"></textarea>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+            <button class="modal-btn-secondary" style="font-size:12px;padding:7px 14px" onclick="document.getElementById('csvImportFileInput').click()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;vertical-align:-2px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Carregar arquivo .csv
+            </button>
+            <span style="font-size:11px;color:var(--muted)">ou cole o texto acima</span>
+          </div>
+          <input type="file" id="csvImportFileInput" accept=".csv" style="display:none">
+        </div>
+
+        <div id="importParseError" style="display:none;background:var(--danger-light);border:1px solid #f5c6c0;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--danger)"></div>
+      </div>
+
+      <!-- Passo 2: Preview -->
+      <div id="importStep2" style="display:none">
+        <p class="modal-desc" style="margin-bottom:10px">Revise os dados antes de importar. O que você aprovar vai substituir o mês atual.</p>
+        <div id="importPreviewBody" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px"></div>
+        <div style="margin-top:12px;padding:10px 14px;background:#FDF8E4;border:1px solid #E8D97A;border-radius:8px;font-size:12px;color:#7A6010">
+          ⚠ A importação <strong>substitui</strong> os dados do mês <span id="importTargetMonthLabel"></span>. Esta ação pode ser desfeita recarregando os dados do mês anterior.
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn-secondary" id="importBackBtn" onclick="importGoBack()" style="display:none">← Voltar</button>
+      <button class="modal-btn-secondary" onclick="closeImportModal()">Cancelar</button>
+      <button class="modal-btn-primary" id="importNextBtn" onclick="importNext()">Continuar →</button>
+    </div>
+  </div>
+</div>
+<!-- Modal: Relatório anual -->
+<div class="modal-overlay" id="yearReportModal" style="align-items:flex-start;padding:24px 16px;overflow-y:auto">
+  <div class="modal" style="width:min(960px,96vw);max-height:none">
+    <div class="modal-header">
+      <div class="modal-title" id="yearReportTitle">Relatório Anual</div>
+      <button class="modal-close" onclick="closeYearReport()">×</button>
+    </div>
+    <div class="modal-body" id="yearReportBody" style="padding-bottom:8px">
+      <div class="year-report-loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
 </div><!-- /appScreen -->
+
+<!-- Modal: Boas-vindas -->
+<div class="modal-overlay" id="welcomeModal">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header" style="padding-bottom:4px">
+      <div class="modal-title" id="welcomeModalTitle">Olá! 👋</div>
+    </div>
+    <div class="modal-body" style="padding-top:12px">
+
+      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px" id="welcomeModalSubtitle">
+        Bem-vindo ao <strong style="color:var(--text)">Controle de Gastos</strong>. Aqui vai um resumo rápido do que você pode fazer:
+      </p>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+        <div class="welcome-tip">
+          <div class="welcome-tip-icon">💰</div>
+          <div>
+            <div class="welcome-tip-title">Registre suas rendas</div>
+            <div class="welcome-tip-desc">Adicione sua renda principal e fontes extras no topo da página.</div>
+          </div>
+        </div>
+        <div class="welcome-tip">
+          <div class="welcome-tip-icon">📂</div>
+          <div>
+            <div class="welcome-tip-title">Organize por categorias</div>
+            <div class="welcome-tip-desc">Cada categoria agrupa seus gastos. Você pode criar, renomear e remover categorias.</div>
+          </div>
+        </div>
+        <div class="welcome-tip">
+          <div class="welcome-tip-icon">💳</div>
+          <div>
+            <div class="welcome-tip-title">Compras parceladas</div>
+            <div class="welcome-tip-desc">Registre uma compra parcelada e o valor é distribuído automaticamente nos meses seguintes.</div>
+          </div>
+        </div>
+        <div class="welcome-tip">
+          <div class="welcome-tip-icon">📅</div>
+          <div>
+            <div class="welcome-tip-title">Navegue por meses</div>
+            <div class="welcome-tip-desc">Use o seletor de mês no cabeçalho para consultar ou editar qualquer período.</div>
+          </div>
+        </div>
+        <div class="welcome-tip">
+          <div class="welcome-tip-icon">↩</div>
+          <div>
+            <div class="welcome-tip-title">Copie do mês anterior</div>
+            <div class="welcome-tip-desc">Reaplique rendas e gastos recorrentes com um clique, sem redigitar tudo.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--primary-light);border-radius:10px;padding:12px 16px;display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:18px;flex-shrink:0">🔔</span>
+        <p style="font-size:12px;color:var(--primary);line-height:1.6;margin:0">
+          A plataforma está em desenvolvimento ativo. Novas funcionalidades serão adicionadas em breve — você será avisado quando isso acontecer.
+        </p>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn-primary" style="width:100%;padding:11px 0" id="welcomeModalBtn">Começar a usar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Atualização -->
+<div class="modal-overlay" id="updateModal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">🚀 Novidade no app</div>
+    </div>
+    <div class="modal-body">
+      <div id="updateContent"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn-primary" style="width:100%;padding:11px 0" id="updateModalBtn">Entendido</button>
+    </div>
+  </div>
+</div>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
