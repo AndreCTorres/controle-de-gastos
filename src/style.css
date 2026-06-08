@@ -792,6 +792,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .import-textarea:focus { border-color: var(--primary); }
 
 /* Preview cards */
+.import-preview-body-wrap {
+  position: relative;
+}
+.import-preview-body-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.92));
+  pointer-events: none;
+  border-radius: 0 0 8px 8px;
+  transition: opacity 0.2s;
+}
+.import-preview-body-wrap.at-bottom::after {
+  opacity: 0;
+}
 .import-preview-section {
   background: var(--bg);
   border: 1px solid var(--border);

@@ -9,19 +9,40 @@ Stack: HTML + CSS + JS vanilla → Supabase (banco + auth) → Netlify (hospedag
 
 ```
 ├── src/
-│   ├── index.html        # HTML principal
-│   ├── style.css         # Todos os estilos
+│   ├── index.html              # HTML principal (tela de auth + app)
+│   ├── style.css               # Todos os estilos
 │   └── js/
-│       ├── config.js     # Credenciais do Supabase
-│       ├── auth.js       # Login, cadastro, logout, session listener
-│       ├── db.js         # Funções de leitura/escrita no Supabase
-│       └── app.js        # Toda a lógica da aplicação
+│       ├── config.js           # Credenciais do Supabase (não versionado)
+│       ├── config.example.js   # Template de configuração
+│       ├── constants.js        # Meses, categorias padrão e paleta de cores
+│       ├── state.js            # Estado compartilhado da aplicação
+│       ├── auth.js             # Login, cadastro, logout, session listener
+│       ├── db.js               # Leitura/escrita no Supabase + cache local
+│       ├── persist.js          # Debounce de save e persistência offline
+│       ├── utils.js            # Helpers (formatação de moeda, percentual)
+│       ├── app.js              # Bootstrap, navegação de meses, export CSV/PDF
+│       ├── ui/
+│       │   ├── chart.js        # Gráfico donut e painel de distribuição
+│       │   ├── feedback.js     # Widget de feedback (Formspree)
+│       │   ├── income.js       # Linhas de renda
+│       │   ├── modal.js        # Abertura/fechamento de modais + focus trap
+│       │   ├── offline.js      # Banner offline e sincronização ao reconectar
+│       │   ├── recalc.js       # Recálculo de totais e indicadores de metas
+│       │   ├── sections.js     # Cards de categoria, itens, drag & drop
+│       │   └── toast.js        # Notificações toast e confirmação inline
+│       └── modals/
+│           ├── copy.js         # Modal "Copiar mês anterior"
+│           ├── goals.js        # Modal "Metas mensais"
+│           ├── import.js       # Modal "Importar CSV"
+│           ├── newSection.js   # Modal "Nova categoria"
+│           ├── parcel.js       # Modal "Compra parcelada"
+│           └── yearReport.js   # Modal "Relatório anual"
 ├── supabase/
-│   ├── schema.sql        # Tabela principal (months) + RLS
-│   ├── goals.sql         # Tabela de metas mensais (monthly_goals) + RLS
-│   ├── updates.sql       # Tabela de notificações de atualização (app_updates) + RLS
-│   └── email-confirm.html  # Template customizado de confirmação de e-mail
-├── netlify.toml          # Configuração de deploy e headers de segurança
+│   ├── schema.sql              # Tabela principal (months) + RLS
+│   ├── goals.sql               # Tabela de metas mensais (monthly_goals) + RLS
+│   ├── updates.sql             # Tabela de notificações de atualização (app_updates) + RLS
+│   └── email-confirm.html      # Template customizado de confirmação de e-mail
+├── netlify.toml                # Configuração de deploy e headers de segurança
 └── .gitignore
 ```
 
@@ -38,6 +59,7 @@ Stack: HTML + CSS + JS vanilla → Supabase (banco + auth) → Netlify (hospedag
 - **Metas mensais** — define limite de gasto por categoria com indicador visual de progresso
 - **Relatório anual** — sumário do ano, gráfico de barras e tabela de despesas × meses
 - **Export CSV / PDF** e **import CSV**
+- **Suporte offline** — leitura do cache local quando sem conexão; sincronização automática ao reconectar
 - **Notificações de atualização** — modal exibido uma única vez quando há novidade
 
 ---

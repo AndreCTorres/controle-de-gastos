@@ -5,6 +5,7 @@ import { openModal, closeModal } from '../ui/modal.js';
 import { renderIncomes } from '../ui/income.js';
 import { renderSections } from '../ui/sections.js';
 import { recalc } from '../ui/recalc.js';
+import { scheduleSave } from '../persist.js';
 
 // ── Import CSV modal ──
 
@@ -95,6 +96,21 @@ document.getElementById('csvImportFileInput')?.addEventListener('change', functi
   this.value = '';
 });
 
+// Normalise a Brazilian/generic decimal string to a JS-parseable string.
+// Handles: "1.234,56" → "1234.56", "1234.56" → "1234.56", "1234,56" → "1234.56"
+function normaliseVal(raw) {
+  const s = raw.trim();
+  if (!s) return '';
+  // Detect whether the string uses comma as decimal separator
+  // Pattern: digits, optional thousands separators, comma, exactly 2 decimal digits
+  if (/^\d{1,3}(\.\d{3})*(,\d{1,2})?$/.test(s)) {
+    // Brazilian format: remove dots (thousands), replace comma with period
+    return s.replace(/\./g, '').replace(',', '.');
+  }
+  // Already in standard format (e.g. "1234.56") — keep as is
+  return s;
+}
+
 // Parse CSV in the app's format — returns { incomes, sections } or throws with a message
 export function parseImportCsv(rawText) {
   const text  = rawText.replace(/^\uFEFF/, '').trim();
@@ -121,8 +137,10 @@ export function parseImportCsv(rawText) {
   lines.forEach(line => {
     const parts  = line.split(';');
     const label  = (parts[0] || '').trim();
-    const rawVal = (parts[1] || '').trim().replace(/\./g, '').replace(',', '.');
+    const rawVal = normaliseVal(parts[1] || '');
     const val    = parseFloat(rawVal) || 0;
+    // Preserve original formatted value (2 decimal places) to avoid float precision issues
+    const valStr = val > 0 ? val.toFixed(2) : '';
 
     if (label === 'Total Renda' || label === 'TOTAL DESPESAS' || label === 'SALDO') return;
     if (line.startsWith('Controle de Gastos')) return;
@@ -133,7 +151,7 @@ export function parseImportCsv(rawText) {
         const colorMatch = secColorRe.exec(line);
         if (colorMatch) { inRendasBlock = false; }
         else {
-          importedIncomes.push({ id: importedIncomes.length === 0 ? 'main' : uid(), label, val: val > 0 ? String(val) : '' });
+          importedIncomes.push({ id: importedIncomes.length === 0 ? 'main' : uid(), label, val: valStr });
           return;
         }
       }
@@ -182,12 +200,12 @@ export function parseImportCsv(rawText) {
     }
 
     if (inHeaderBlock && !hasRendasBlock && label && parts.length >= 1) {
-      importedIncomes.push({ id: importedIncomes.length === 0 ? 'main' : uid(), label, val: val > 0 ? String(val) : '' });
+      importedIncomes.push({ id: importedIncomes.length === 0 ? 'main' : uid(), label, val: valStr });
       return;
     }
 
     if (currentSec && label) {
-      currentSec.items.push({ id: uid(), label, val: val > 0 ? String(val) : '' });
+      currentSec.items.push({ id: uid(), label, val: valStr });
     }
   });
 
@@ -298,6 +316,18 @@ window.importNext = async function() {
     step2.style.display = '';
     document.getElementById('importBackBtn').style.display = '';
     document.getElementById('importNextBtn').textContent = 'Importar dados';
+
+    // Set up scroll fade indicator
+    const body = document.getElementById('importPreviewBody');
+    const wrap = document.getElementById('importPreviewBodyWrap');
+    const updateFade = () => {
+      const atBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 4;
+      wrap.classList.toggle('at-bottom', atBottom);
+    };
+    body.addEventListener('scroll', updateFade, { passive: true });
+    // Delay check to allow layout to settle
+    requestAnimationFrame(() => requestAnimationFrame(updateFade));
+
     return;
   }
 
@@ -308,6 +338,7 @@ window.importNext = async function() {
   renderIncomes();
   renderSections();
   recalc();
+  scheduleSave();
   window.closeImportModal();
   window.showToast(`Dados importados para ${MONTHS[state.currentMonth]} ${state.currentYear}!`);
 };

@@ -194,7 +194,7 @@ window.exportPDF = function() {
   ph.innerHTML = `
     <div class="print-header-title">Controle de Gastos — ${MONTHS[state.currentMonth]} ${state.currentYear}</div>
     <div class="print-header-sub">
-      <span>Renda: <strong>${getTotalIncome().toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></span>
+      <span>Renda: <strong>${renda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></span>
       <span class="print-sep">·</span>
       <span>Despesas: <strong>${despesas}</strong></span>
       <span class="print-sep">·</span>
@@ -323,10 +323,18 @@ async function checkForUpdates(user) {
 // ── Welcome modal ──
 
 async function maybeShowWelcome(user) {
-  const seen = user.user_metadata?.welcome_seen;
-  if (seen) return;
+  // The user object from onAuthStateChange comes from the local JWT cache and may
+  // not reflect metadata updates (e.g. welcome_seen) written in a previous session.
+  // Always fetch fresh metadata from the server before deciding to show the modal.
+  let meta = user.user_metadata;
+  try {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user?.user_metadata) meta = data.user.user_metadata;
+  } catch (_) { /* use cached metadata as fallback */ }
 
-  const name = user.user_metadata?.name || user.email.split('@')[0];
+  if (meta?.welcome_seen) return;
+
+  const name = meta?.name || user.email.split('@')[0];
   document.getElementById('welcomeModalTitle').textContent = `Olá, ${name}! 👋`;
 
   openModal('welcomeModal');

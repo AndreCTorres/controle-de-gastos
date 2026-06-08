@@ -409,7 +409,9 @@
       <!-- Passo 2: Preview -->
       <div id="importStep2" style="display:none">
         <p class="modal-desc" style="margin-bottom:10px">Revise os dados antes de importar. O que você aprovar vai substituir o mês atual.</p>
-        <div id="importPreviewBody" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px"></div>
+        <div class="import-preview-body-wrap" id="importPreviewBodyWrap">
+          <div id="importPreviewBody" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px"></div>
+        </div>
         <div style="margin-top:12px;padding:10px 14px;background:#FDF8E4;border:1px solid #E8D97A;border-radius:8px;font-size:12px;color:#7A6010">
           ⚠ A importação <strong>substitui</strong> os dados do mês <span id="importTargetMonthLabel"></span>. Esta ação pode ser desfeita recarregando os dados do mês anterior.
         </div>

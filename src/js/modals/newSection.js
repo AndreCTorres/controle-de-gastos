@@ -23,15 +23,26 @@ window.addNewSectionItem = function() {
   const wrap = document.getElementById('newSectionItems');
   const row  = document.createElement('div');
   row.style.cssText = 'display:flex;align-items:center;gap:6px';
-  row.innerHTML = `
-    <input type="text" placeholder="Nome do item" class="modal-input"
-      onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-    <button title="Remover" style="width:28px;height:28px;border:none;background:transparent;color:#ccc;cursor:pointer;border-radius:5px;font-size:17px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s"
-      onmouseover="this.style.background='var(--danger-light)';this.style.color='var(--danger)'"
-      onmouseout="this.style.background='transparent';this.style.color='#ccc'"
-      onclick="this.parentElement.remove()">×</button>`;
+
+  const input = document.createElement('input');
+  input.type        = 'text';
+  input.placeholder = 'Nome do item';
+  input.className   = 'modal-input';
+  input.addEventListener('focus', () => { input.style.borderColor = 'var(--primary)'; });
+  input.addEventListener('blur',  () => { input.style.borderColor = 'var(--border)'; });
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type      = 'button';
+  removeBtn.title     = 'Remover';
+  removeBtn.className = 'del-btn';
+  removeBtn.setAttribute('aria-label', 'Remover item');
+  removeBtn.textContent = '×';
+  removeBtn.addEventListener('click', () => row.remove());
+
+  row.appendChild(input);
+  row.appendChild(removeBtn);
   wrap.appendChild(row);
-  row.querySelector('input').focus();
+  input.focus();
 };
 
 window.confirmNewSection = function() {

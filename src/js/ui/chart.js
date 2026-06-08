@@ -115,13 +115,11 @@ export function updateSummary(secTotals, renda, totalDesp) {
     const sid = el.dataset.sid;
     const sec = secTotals.find(s => s.id === sid);
     if (!sec) return;
-    const fillEl   = el.querySelector('.section-progress-fill');
-    const pctLabel = el.querySelector('.section-pct-label');
-    if (!fillEl || !pctLabel) return;
+    const fillEl = el.querySelector('.section-progress-fill');
+    if (!fillEl) return;
     const p = pct(sec.total, totalDesp);
     const safeColor = /^#[0-9A-Fa-f]{3,8}$/.test(sec.color || '') ? sec.color : '#888';
     fillEl.style.width      = p + '%';
     fillEl.style.background = safeColor;
-    pctLabel.textContent    = totalDesp > 0 ? p + '% do total' : '';
   });
 }
