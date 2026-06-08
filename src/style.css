@@ -280,15 +280,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .new-section-btn:active{transform:scale(0.96)}
 
 /* ── MODAL ── */
-.modal-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s}
+.modal-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.45);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;padding:16px}
 .modal-overlay.open{opacity:1;pointer-events:all}
-.modal{background:#fff;border-radius:16px;width:480px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,0.2);transform:translateY(12px) scale(0.97);transition:transform 0.22s ease}
+.modal{background:#fff;border-radius:16px;width:480px;max-width:92vw;max-height:calc(100dvh - 32px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.2);transform:translateY(12px) scale(0.97);transition:transform 0.22s ease}
 .modal-overlay.open .modal{transform:translateY(0) scale(1)}
-.modal-header{display:flex;align-items:center;justify-content:space-between;padding:24px 28px 0}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:24px 28px 0;flex-shrink:0}
 .modal-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--text)}
 .modal-close{width:30px;height:30px;border:none;background:var(--bg);color:var(--muted);border-radius:6px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
 .modal-close:hover{background:var(--border);color:var(--text)}
-.modal-body{padding:18px 28px}
+.modal-body{padding:18px 28px;overflow-y:auto;flex:1;min-height:0}
 .modal-desc{font-size:14px;color:var(--muted);margin-bottom:16px;line-height:1.5}
 .modal-desc strong{color:var(--text)}
 .modal-input{width:100%;border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color 0.15s}
@@ -302,7 +302,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .copy-option.selected .copy-option-check{background:var(--primary);border-color:var(--primary)}
 .copy-option-label{font-size:14px;color:var(--text);font-weight:500}
 .copy-option-sub{font-size:12px;color:var(--muted);margin-top:1px}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:0 28px 24px;border-top:1px solid var(--border);padding-top:18px;margin-top:4px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:0 28px 24px;border-top:1px solid var(--border);padding-top:18px;margin-top:4px;flex-shrink:0}
 .modal-btn-secondary{background:var(--bg);border:1px solid var(--border);color:var(--muted);padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;transition:all 0.15s}
 .modal-btn-secondary:hover{border-color:var(--muted);color:var(--text)}
 .modal-btn-primary{background:var(--primary);color:#fff;border:none;padding:10px 22px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.15s}
