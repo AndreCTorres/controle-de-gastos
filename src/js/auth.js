@@ -1,13 +1,17 @@
 import { supabase } from './config.js';
 import { initApp } from './app.js';
+import { state } from './state.js';
 
 // ── Auth state listener ──
 supabase.auth.onAuthStateChange((_event, session) => {
   const user = session?.user ?? null;
   if (user) {
+    // Cache userId on login so db.js never needs to call getUser() again
+    state.userId = user.id;
     showApp(user);
   } else {
-    // Garante que o estado local é limpo ao deslogar
+    // Clear cached userId on logout
+    state.userId = null;
     showAuth();
   }
 });

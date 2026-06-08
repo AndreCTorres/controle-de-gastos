@@ -174,11 +174,13 @@
 </div>
 
 <footer class="app-footer">
-  <span>© <span id="footer-year"></span> André Torres</span>
-  <span class="footer-sep">·</span>
-  <span>Controle de Gastos Pessoais</span>
-  <span class="footer-sep">·</span>
-  <span>Todos os direitos reservados</span>
+  <div class="footer-credits">
+    <span>© <span id="footer-year"></span> André Torres</span>
+    <span class="footer-sep">·</span>
+    <span>Controle de Gastos Pessoais</span>
+    <span class="footer-sep">·</span>
+    <span>Todos os direitos reservados</span>
+  </div>
 </footer>
 
 <!-- Exportar floating button -->
@@ -207,12 +209,36 @@
 </div>
 <input type="file" id="csvFileInput" accept=".csv" style="display:none">
 
+<!-- Feedback floating button -->
+<div class="feedback-fab" id="feedbackFab">
+  <div class="feedback-fab-menu" id="feedbackFabMenu">
+    <form id="feedbackForm" autocomplete="off">
+      <div class="feedback-fab-label">Deixe seu feedback</div>
+      <textarea
+        id="feedbackText"
+        class="feedback-fab-textarea"
+        placeholder="Alguma sugestão ou problema encontrado?"
+        maxlength="1000"
+        rows="4"
+      ></textarea>
+      <div class="feedback-fab-footer">
+        <span id="feedbackStatus" class="feedback-fab-status"></span>
+        <button type="submit" id="feedbackBtn" class="feedback-fab-send-btn">Enviar</button>
+      </div>
+    </form>
+  </div>
+  <button class="feedback-fab-btn" id="feedbackFabBtn" onclick="toggleFeedbackMenu()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Feedback
+  </button>
+</div>
+
 <!-- Modal: Compra parcelada -->
-<div class="modal-overlay" id="parcelModal">
+<div class="modal-overlay" id="parcelModal" role="dialog" aria-modal="true" aria-labelledby="parcelModalTitle">
   <div class="modal" style="width:460px">
     <div class="modal-header">
-      <div class="modal-title">Compra parcelada</div>
-      <button class="modal-close" onclick="closeParcelModal()">×</button>
+      <div class="modal-title" id="parcelModalTitle">Compra parcelada</div>
+      <button class="modal-close" onclick="closeParcelModal()" aria-label="Fechar modal">×</button>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
       <div>
@@ -253,11 +279,11 @@
 </div>
 
 <!-- Modal: Nova categoria -->
-<div class="modal-overlay" id="newSectionModal">
+<div class="modal-overlay" id="newSectionModal" role="dialog" aria-modal="true" aria-labelledby="newSectionModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Nova categoria</div>
-      <button class="modal-close" onclick="closeNewSectionModal()">×</button>
+      <div class="modal-title" id="newSectionModalTitle">Nova categoria</div>
+      <button class="modal-close" onclick="closeNewSectionModal()" aria-label="Fechar modal">×</button>
     </div>
     <div class="modal-body">
       <p class="modal-desc">Dê um nome para a categoria e adicione os itens iniciais.</p>
@@ -278,11 +304,11 @@
 </div>
 
 <!-- Modal: Copiar mês -->
-<div class="modal-overlay" id="copyModal">
+<div class="modal-overlay" id="copyModal" role="dialog" aria-modal="true" aria-labelledby="copyModalTitle">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Copiar do mês anterior</div>
-      <button class="modal-close" onclick="closeCopyModal()">×</button>
+      <div class="modal-title" id="copyModalTitle">Copiar do mês anterior</div>
+      <button class="modal-close" onclick="closeCopyModal()" aria-label="Fechar modal">×</button>
     </div>
     <div class="modal-body">
       <p class="modal-desc">Selecione o que deseja trazer para <strong id="copyTargetMonth"></strong>:</p>
@@ -296,11 +322,11 @@
 </div>
 
 <!-- Modal: Metas mensais -->
-<div class="modal-overlay" id="goalsModal">
+<div class="modal-overlay" id="goalsModal" role="dialog" aria-modal="true" aria-labelledby="goalsModalTitle">
   <div class="modal" style="width:480px">
     <div class="modal-header">
-      <div class="modal-title">Metas do mês</div>
-      <button class="modal-close" onclick="closeGoalsModal()">×</button>
+      <div class="modal-title" id="goalsModalTitle">Metas do mês</div>
+      <button class="modal-close" onclick="closeGoalsModal()" aria-label="Fechar modal">×</button>
     </div>
     <div class="modal-body">
       <p class="modal-desc">Defina um limite de gasto para cada categoria. Um indicador de progresso aparecerá nos cards quando a meta for configurada.</p>
@@ -314,11 +340,11 @@
 </div>
 
 <!-- Modal: Importar CSV -->
-<div class="modal-overlay" id="importModal">
+<div class="modal-overlay" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
   <div class="modal" style="width:min(560px,94vw)">
     <div class="modal-header">
-      <div class="modal-title">Importar CSV</div>
-      <button class="modal-close" onclick="closeImportModal()">×</button>
+      <div class="modal-title" id="importModalTitle">Importar CSV</div>
+      <button class="modal-close" onclick="closeImportModal()" aria-label="Fechar modal">×</button>
     </div>
     <div class="modal-body" style="display:flex;flex-direction:column;gap:18px">
 
@@ -398,11 +424,16 @@
   </div>
 </div>
 <!-- Modal: Relatório anual -->
-<div class="modal-overlay" id="yearReportModal" style="align-items:flex-start;padding:24px 16px;overflow-y:auto">
+<div class="modal-overlay" id="yearReportModal" role="dialog" aria-modal="true" aria-labelledby="yearReportTitle" style="align-items:flex-start;padding:24px 16px;overflow-y:auto">
   <div class="modal" style="width:min(960px,96vw);max-height:none">
     <div class="modal-header">
       <div class="modal-title" id="yearReportTitle">Relatório Anual</div>
-      <button class="modal-close" onclick="closeYearReport()">×</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="modal-btn-secondary" id="yearReportExportBtn" onclick="exportYearReport()" style="font-size:12px;padding:5px 12px;display:none" aria-label="Exportar relatório como CSV">
+          ⬇ Exportar CSV
+        </button>
+        <button class="modal-close" onclick="closeYearReport()" aria-label="Fechar modal">×</button>
+      </div>
     </div>
     <div class="modal-body" id="yearReportBody" style="padding-bottom:8px">
       <div class="year-report-loading"><div class="spinner"></div></div>
@@ -413,51 +444,79 @@
 </div><!-- /appScreen -->
 
 <!-- Modal: Boas-vindas -->
-<div class="modal-overlay" id="welcomeModal">
-  <div class="modal" style="max-width:480px">
+<div class="modal-overlay" id="welcomeModal" role="dialog" aria-modal="true" aria-labelledby="welcomeModalTitle">
+  <div class="modal" style="max-width:520px">
     <div class="modal-header" style="padding-bottom:4px">
       <div class="modal-title" id="welcomeModalTitle">Olá! 👋</div>
     </div>
     <div class="modal-body" style="padding-top:12px">
 
-      <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px" id="welcomeModalSubtitle">
-        Bem-vindo ao <strong style="color:var(--text)">Controle de Gastos</strong>. Aqui vai um resumo rápido do que você pode fazer:
+      <p style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:18px" id="welcomeModalSubtitle">
+        Bem-vindo ao <strong style="color:var(--text)">Controle de Gastos</strong>. Aqui vai um resumo do que você tem disponível:
       </p>
 
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
         <div class="welcome-tip">
           <div class="welcome-tip-icon">💰</div>
           <div>
-            <div class="welcome-tip-title">Registre suas rendas</div>
-            <div class="welcome-tip-desc">Adicione sua renda principal e fontes extras no topo da página.</div>
+            <div class="welcome-tip-title">Rendas do mês</div>
+            <div class="welcome-tip-desc">Registre sua renda principal e adicione fontes extras. O saldo é calculado automaticamente.</div>
           </div>
         </div>
         <div class="welcome-tip">
           <div class="welcome-tip-icon">📂</div>
           <div>
-            <div class="welcome-tip-title">Organize por categorias</div>
-            <div class="welcome-tip-desc">Cada categoria agrupa seus gastos. Você pode criar, renomear e remover categorias.</div>
+            <div class="welcome-tip-title">Categorias de gastos</div>
+            <div class="welcome-tip-desc">Organize despesas em categorias. Crie, renomeie e remova — podendo aplicar a mudança só no mês atual ou nos seguintes também.</div>
+          </div>
+        </div>
+        <div class="welcome-tip">
+          <div class="welcome-tip-icon">🎯</div>
+          <div>
+            <div class="welcome-tip-title">Metas mensais</div>
+            <div class="welcome-tip-desc">Defina um limite de gasto por categoria. Um indicador de progresso aparece no card quando a meta está configurada.</div>
           </div>
         </div>
         <div class="welcome-tip">
           <div class="welcome-tip-icon">💳</div>
           <div>
             <div class="welcome-tip-title">Compras parceladas</div>
-            <div class="welcome-tip-desc">Registre uma compra parcelada e o valor é distribuído automaticamente nos meses seguintes.</div>
+            <div class="welcome-tip-desc">Informe o valor total e o número de parcelas — o app distribui os valores automaticamente nos meses seguintes.</div>
           </div>
         </div>
         <div class="welcome-tip">
-          <div class="welcome-tip-icon">📅</div>
+          <div class="welcome-tip-icon">↔️</div>
           <div>
-            <div class="welcome-tip-title">Navegue por meses</div>
-            <div class="welcome-tip-desc">Use o seletor de mês no cabeçalho para consultar ou editar qualquer período.</div>
+            <div class="welcome-tip-title">Mover e reorganizar itens</div>
+            <div class="welcome-tip-desc">Arraste itens entre categorias ou use o botão de mover. A ordem dentro de cada categoria também pode ser reordenada por arrastar.</div>
           </div>
         </div>
         <div class="welcome-tip">
           <div class="welcome-tip-icon">↩</div>
           <div>
-            <div class="welcome-tip-title">Copie do mês anterior</div>
-            <div class="welcome-tip-desc">Reaplique rendas e gastos recorrentes com um clique, sem redigitar tudo.</div>
+            <div class="welcome-tip-title">Copiar mês anterior</div>
+            <div class="welcome-tip-desc">Reaplique rendas e gastos recorrentes com um clique — escolha o que quer trazer sem precisar redigitar.</div>
+          </div>
+        </div>
+        <div class="welcome-tip">
+          <div class="welcome-tip-icon">📊</div>
+          <div>
+            <div class="welcome-tip-title">Relatório anual</div>
+            <div class="welcome-tip-desc">Veja um resumo completo do ano: totais por mês, despesas por categoria, gráfico de barras e mês de maior gasto.</div>
+          </div>
+        </div>
+        <div class="welcome-tip">
+          <div class="welcome-tip-icon">📁</div>
+          <div>
+            <div class="welcome-tip-title">Exportar e importar</div>
+            <div class="welcome-tip-desc">Exporte os dados do mês em CSV ou PDF. Importe planilhas existentes — o app orienta como converter para o formato correto.</div>
+          </div>
+        </div>
+        <div class="welcome-tip">
+          <div class="welcome-tip-icon">📅</div>
+          <div>
+            <div class="welcome-tip-title">Navegação por meses</div>
+            <div class="welcome-tip-desc">Use o seletor de mês no cabeçalho para consultar ou editar qualquer período, incluindo meses futuros.</div>
           </div>
         </div>
       </div>
@@ -465,7 +524,7 @@
       <div style="background:var(--primary-light);border-radius:10px;padding:12px 16px;display:flex;gap:12px;align-items:flex-start">
         <span style="font-size:18px;flex-shrink:0">🔔</span>
         <p style="font-size:12px;color:var(--primary);line-height:1.6;margin:0">
-          A plataforma está em desenvolvimento ativo. Novas funcionalidades serão adicionadas em breve — você será avisado quando isso acontecer.
+          A plataforma está em desenvolvimento ativo. Novas funcionalidades serão adicionadas — você será avisado quando isso acontecer.
         </p>
       </div>
 
@@ -477,10 +536,10 @@
 </div>
 
 <!-- Modal: Atualização -->
-<div class="modal-overlay" id="updateModal">
+<div class="modal-overlay" id="updateModal" role="dialog" aria-modal="true" aria-labelledby="updateModalHeading">
   <div class="modal" style="max-width:440px">
     <div class="modal-header">
-      <div class="modal-title">🚀 Novidade no app</div>
+      <div class="modal-title" id="updateModalHeading">🚀 Novidade no app</div>
     </div>
     <div class="modal-body">
       <div id="updateContent"></div>
@@ -492,15 +551,12 @@
 </div>
 
 <!-- Toast -->
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- App modules -->
-<script type="module" src="js/config.js"></script>
+<!-- App — auth.js é o ponto de entrada; importa app.js que importa todos os módulos -->
 <script type="module" src="js/auth.js"></script>
-<script type="module" src="js/db.js"></script>
-<script type="module" src="js/app.js"></script>
 
 </body>
 </html>

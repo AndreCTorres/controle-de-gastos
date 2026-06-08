@@ -54,15 +54,20 @@ Stack: HTML + CSS + JS vanilla → Supabase (banco + auth) → Netlify (hospedag
 3. Vá em **Project Settings → API** e copie:
    - **Project URL**
    - **anon public key**
-4. Abra `src/js/config.js` e substitua os valores:
+4. Crie o arquivo de configuração a partir do template:
+   ```bash
+   copy src\js\config.example.js src\js\config.js
+   ```
+5. Abra `src/js/config.js` e substitua os valores:
    ```js
    export const SUPABASE_URL      = 'SUA_PROJECT_URL';
    export const SUPABASE_ANON_KEY = 'SUA_ANON_KEY';
    ```
 
-> **Segurança:** a `anon key` do Supabase é pública por design — pode ficar no código.
-> A proteção real dos dados é feita pelo Row Level Security (RLS), que garante que cada
-> usuário só acessa os próprios registros.
+> **Segurança:** `config.js` está no `.gitignore` e nunca é commitado. A `anon key` do
+> Supabase é pública por design — pode ficar no código do cliente. A proteção real dos
+> dados é feita pelo Row Level Security (RLS), que garante que cada usuário só acessa
+> os próprios registros.
 
 ### 2. GitHub
 

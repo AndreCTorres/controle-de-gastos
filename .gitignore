@@ -8,6 +8,10 @@ node_modules/
 *.pem
 *.key
 
+# ── Credenciais do Supabase ──
+# config.js contém URL e anon key do projeto. Use config.example.js como template.
+src/js/config.js
+
 # ── Editor (VS Code) ──
 # settings.json é pessoal; extensions.json e launch.json podem ser commitados se necessário
 .vscode/settings.json
