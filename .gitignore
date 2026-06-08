@@ -8,9 +8,11 @@ node_modules/
 *.pem
 *.key
 
-# ── Credenciais do Supabase ──
-# config.js contém URL e anon key do projeto. Use config.example.js como template.
-src/js/config.js
+# ── Supabase config ──
+# config.js contém apenas a SUPABASE_URL e a SUPABASE_ANON_KEY.
+# A anon key é uma chave PÚBLICA por design — ela é exposta no cliente e visível
+# no DevTools por qualquer pessoa. O acesso real aos dados é controlado por RLS
+# no Supabase. Não há segredo aqui, por isso o arquivo é versionado normalmente.
 
 # ── Editor (VS Code) ──
 # settings.json é pessoal; extensions.json e launch.json podem ser commitados se necessário

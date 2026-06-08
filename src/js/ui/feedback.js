@@ -3,8 +3,7 @@ import { MONTHS } from '../constants.js';
 import { supabase } from '../config.js';
 
 // ── Endpoint Formspree ──
-// Substitua pelo endpoint gerado em formspree.io/f/XXXXXXXX
-const FORMSPREE_ENDPOINT = 'https://formspree.io/f/SEU_ID_AQUI';
+const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xzdqrzgb';
 
 let feedbackTimer  = null;
 let menuOpen       = false;
