@@ -29,6 +29,7 @@ export async function persistData() {
         val:   row ? row.querySelector('.amount-input').value : item.val,
       };
       if (item.parcel) entry.parcel = true;
+      if (item.checked) entry.checked = true;
       return entry;
     });
     return { id: sec.id, title: sec.title, color: sec.color, bg: sec.bg, items };

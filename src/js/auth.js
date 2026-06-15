@@ -3,15 +3,31 @@ import { initApp } from './app.js';
 import { state } from './state.js';
 
 // ── Auth state listener ──
-supabase.auth.onAuthStateChange((_event, session) => {
+supabase.auth.onAuthStateChange((event, session) => {
   const user = session?.user ?? null;
   if (user) {
+    const previousUserId = state.userId;
     // Cache userId on login so db.js never needs to call getUser() again
     state.userId = user.id;
-    showApp(user);
+    state.userEmail = user.email || '';
+    state.userMeta = user.user_metadata || {};
+
+    // Supabase can emit auth/session events when the tab regains focus.
+    // Only bootstrap the app once per signed-in user; later token refreshes should not reload data.
+    if (state.appReady && previousUserId === user.id) {
+      updateUserHeader(user);
+      return;
+    }
+
+    if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+      showApp(user);
+    }
   } else {
     // Clear cached userId on logout
     state.userId = null;
+    state.userEmail = '';
+    state.userMeta = {};
+    state.appReady = false;
     showAuth();
   }
 });
@@ -22,12 +38,15 @@ function showApp(user) {
   document.getElementById('appScreen').style.display  = 'block';
   document.body.style.overflow = '';
 
+  updateUserHeader(user);
+  initApp(user);
+}
+
+function updateUserHeader(user) {
   const meta = user.user_metadata;
   const name = meta?.name || user.email.split('@')[0];
   // textContent — o nome do usuário nunca vai para innerHTML
   document.getElementById('headerGreeting').textContent = `Olá, ${name}! 👋`;
-
-  initApp(user);
 }
 
 function showAuth() {
@@ -156,6 +175,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
   });
 
   if (error) {
+    console.error('[Signup error]', error.message, error);
     errEl.textContent   = translateAuthError(error.message);
     errEl.style.display = 'block';
     btn.disabled        = false;
@@ -212,5 +232,9 @@ function translateAuthError(msg) {
   if (msg.includes('Password should be'))         return 'A senha deve ter no mínimo 6 caracteres.';
   if (msg.includes('over_email_send_rate_limit')) return 'Muitos e-mails enviados. Aguarde alguns minutos.';
   if (msg.includes('too_many_requests'))          return 'Muitas tentativas. Aguarde alguns minutos.';
+  if (msg.includes('signup_disabled'))            return 'Novos cadastros estão temporariamente desativados.';
+  if (msg.includes('email_address_invalid'))      return 'Endereço de e-mail inválido.';
+  if (msg.includes('weak_password'))              return 'Senha muito fraca. Use pelo menos 6 caracteres.';
+  if (msg.includes('email_exists'))               return 'Este e-mail já está cadastrado.';
   return 'Ocorreu um erro. Tente novamente.'; // não expõe mensagem técnica ao usuário
 }

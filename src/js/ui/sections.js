@@ -32,6 +32,42 @@ export async function _removeParcelFromFutureMonths(baseTitle, sid, fromMonth, f
   );
 }
 
+export async function _moveParcelInFutureMonths(baseTitle, fromSid, toSection, fromMonth, fromYear, totalParcels, fromNum) {
+  const targets = [];
+  for (let n = fromNum + 1; n <= totalParcels; n++) {
+    let m = fromMonth + (n - fromNum);
+    let y = fromYear;
+    while (m > 11) { m -= 12; y++; }
+    targets.push({ m, y, label: `${baseTitle} (${n}/${totalParcels})` });
+  }
+
+  let count = 0;
+  for (const t of targets) {
+    const data = await loadMonthData(t.m, t.y);
+    if (!data?.sections) continue;
+
+    const fromSec = data.sections.find(s => s.id === fromSid);
+    if (!fromSec) continue;
+
+    const itemIdx = (fromSec.items || []).findIndex(i => i.label === t.label);
+    if (itemIdx === -1) continue;
+
+    const [item] = fromSec.items.splice(itemIdx, 1);
+    let destSec = data.sections.find(s =>
+      s.id === toSection.id || (s.title || '').trim().toLowerCase() === (toSection.title || '').trim().toLowerCase()
+    );
+    if (!destSec) {
+      destSec = { ...toSection, items: [] };
+      data.sections.push(destSec);
+    }
+    destSec.items = destSec.items || [];
+    destSec.items.push(item);
+    await saveMonthData(t.m, t.y, data);
+    count++;
+  }
+  return count;
+}
+
 // ── Propagate item removal to future months ──
 export async function _removeItemFromFutureMonths(sid, iid, itemLabel) {
   const futureSameYear = (await loadYearData(state.currentYear)).filter(m => m.month > state.currentMonth);
@@ -74,7 +110,7 @@ export async function _removeSectionFromFutureMonths(secId) {
   return count;
 }
 
-// ── Remove item (with confirmation for parcels/valued items) ──
+// ── Remove item (always confirms before deleting) ──
 export function removeItem(sid, iid) {
   const sec  = state.sections.find(s => s.id === sid);
   const item = sec?.items.find(i => i.id === iid);
@@ -124,10 +160,25 @@ export function removeItem(sid, iid) {
     return;
   }
 
-  // Case 2: item with no value — remove silently
+  // Case 2: item with no value — still confirm, but only for the current month
   const hasValue = parseFloat(item.val) > 0;
   if (!hasValue) {
-    _doRemoveItem(sid, iid);
+    showConfirmToast(msgDiv => {
+      msgDiv.append('Remover ');
+      const strong = document.createElement('strong');
+      strong.textContent = `"${item.label || 'item sem nome'}"`;
+      msgDiv.appendChild(strong);
+      msgDiv.append('?');
+    }, [
+      {
+        label: 'Remover',
+        style: { background: 'var(--danger)' },
+        onClick: () => {
+          _doRemoveItem(sid, iid);
+          window.showToast(`"${item.label || 'Item'}" removido`);
+        },
+      },
+    ]);
     return;
   }
 
@@ -183,6 +234,63 @@ function _doRemoveItem(sid, iid) {
 export function moveItemToSection(iid, fromSid, toSid) {
   if (fromSid === toSid) return;
 
+  const fromSec = state.sections.find(s => s.id === fromSid);
+  const toSec   = state.sections.find(s => s.id === toSid);
+  if (!fromSec || !toSec) return;
+
+  const itemIdx = fromSec.items.findIndex(i => i.id === iid);
+  if (itemIdx === -1) return;
+  const item = fromSec.items[itemIdx];
+
+  if (item.parcel) {
+    const baseTitle    = item.label.replace(/\s*\(\d+\/\d+\)\s*$/, '').trim();
+    const matchTotal   = item.label.match(/\((\d+)\/(\d+)\)$/);
+    const totalParcels = matchTotal ? parseInt(matchTotal[2]) : 0;
+    const currentNum   = matchTotal ? parseInt(matchTotal[1]) : 0;
+    const remaining    = totalParcels - currentNum;
+
+    if (remaining > 0) {
+      showConfirmToast(msgDiv => {
+        msgDiv.append('Mover as próximas parcelas de ');
+        const strong = document.createElement('strong');
+        strong.textContent = `"${baseTitle}"`;
+        msgDiv.appendChild(strong);
+        msgDiv.append(` para "${toSec.title}" também?`);
+        const sub = document.createElement('div');
+        sub.style.cssText = 'font-size:11px;color:var(--muted);margin-top:4px';
+        sub.textContent = `Se a categoria não existir nos meses futuros, ela será criada com o mesmo nome.`;
+        msgDiv.appendChild(sub);
+      }, [
+        {
+          label: 'Só este mês',
+          style: { background: 'var(--primary)' },
+          onClick: () => _doMoveItemToSection(iid, fromSid, toSid),
+        },
+        {
+          label: 'Este e futuros',
+          style: { fontSize: '11px' },
+          onClick: async () => {
+            try {
+              _doMoveItemToSection(iid, fromSid, toSid);
+              const count = await _moveParcelInFutureMonths(baseTitle, fromSid, toSec, state.currentMonth, state.currentYear, totalParcels, currentNum);
+              window.showToast(count > 0
+                ? `Parcelas futuras movidas para ${toSec.title}`
+                : `Item movido para ${toSec.title}`);
+            } catch (err) {
+              console.error('move parcel future months:', err);
+              window.showToast('Item movido neste mês, mas não foi possível atualizar as parcelas futuras.', 'error');
+            }
+          },
+        },
+      ]);
+      return;
+    }
+  }
+
+  _doMoveItemToSection(iid, fromSid, toSid);
+}
+
+function _doMoveItemToSection(iid, fromSid, toSid) {
   const fromSec = state.sections.find(s => s.id === fromSid);
   const toSec   = state.sections.find(s => s.id === toSid);
   if (!fromSec || !toSec) return;
@@ -286,6 +394,9 @@ export function buildItemRow(item, sid) {
   row.draggable = true;
   row.innerHTML = `
     <div class="item-drag-handle" title="Arrastar para outra categoria">⠿</div>
+    <button class="item-check-toggle" type="button" title="Marcar como conferido" aria-label="Marcar item como conferido">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </button>
     <div class="item-label"><input class="label-input" type="text" placeholder="Nome do item" maxlength="120" value="${(item.label || '').replace(/"/g, '&quot;')}"></div>
     <div class="item-amount">
       <span class="prefix">R$</span>
@@ -309,6 +420,16 @@ export function buildItemRow(item, sid) {
   row.querySelector('.clear-btn').addEventListener('click', () => { row.querySelector('.amount-input').value = ''; recalc(); });
   row.querySelector('.del-btn').addEventListener('click', () => removeItem(sid, item.id));
   row.querySelector('.move-btn').addEventListener('click', (e) => { e.stopPropagation(); openMovePopover(row, item.id, sid); });
+  row.querySelector('.item-check-toggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.toggleItemChecked?.(sid, item.id);
+  });
+  row.addEventListener('click', e => {
+    if (!state.checkMode) return;
+    if (e.target.closest('button, input, .item-actions')) return;
+    window.toggleItemChecked?.(sid, item.id);
+  });
+  row.classList.toggle('checked', !!item.checked);
 
   // Drag & Drop
   row.addEventListener('dragstart', (e) => {
@@ -391,6 +512,7 @@ export function buildSection(sec) {
       </div>
       <div class="section-goal-indicator"></div>
       <div class="section-head-bottom">
+        <span class="section-check-counter">0/0</span>
         <span class="section-total">R$ 0,00</span>
         <button class="section-del-btn" title="Remover categoria" aria-label="Remover categoria">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
@@ -402,6 +524,7 @@ export function buildSection(sec) {
     <div class="add-row"><button class="add-btn">+ Adicionar item</button></div>`;
 
   div.querySelector('.section-tag').textContent = sec.title;
+  div.querySelector('.section-tag').title = sec.title;
 
   const cont = div.querySelector('.items-container');
   sec.items.forEach(item => cont.appendChild(buildItemRow(item, sec.id)));

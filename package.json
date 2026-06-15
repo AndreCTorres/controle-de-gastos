@@ -1,0 +1,19 @@
+{
+  "name": "controle-de-gastos",
+  "version": "1.0.0",
+  "description": "Aplicação de controle financeiro pessoal com suporte a múltiplos usuários",
+  "type": "module",
+  "scripts": {
+    "dev": "python -m http.server 8000 --directory src",
+    "build": "echo 'No build step required - vanilla JS'",
+    "preview": "python -m http.server 8000 --directory src"
+  },
+  "keywords": [
+    "finanças",
+    "controle",
+    "gastos",
+    "pessoal"
+  ],
+  "author": "André Torres",
+  "license": "MIT"
+}

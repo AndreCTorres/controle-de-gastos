@@ -96,6 +96,7 @@ window.updateParcelPreview = function() {
 };
 
 window.confirmParcel = async function() {
+  const confirmBtn = document.querySelector('#parcelModal .modal-btn-primary');
   const title = document.getElementById('parcelTitle').value.trim();
   const total = parseFloat(document.getElementById('parcelTotal').value) || 0;
   const count = parseInt(document.getElementById('parcelCount').value)   || 0;
@@ -110,73 +111,82 @@ window.confirmParcel = async function() {
   if (count < 2)                { flashError('parcelCount');  return; }
   if (!selectedParcelSectionId) { window.showToast('Selecione uma categoria', 'error'); return; }
 
+  confirmBtn.disabled = true;
+  const originalBtnText = confirmBtn.textContent;
+  confirmBtn.textContent = 'Adicionando...';
+
   const parcelVal = parseFloat((total / count).toFixed(2));
   const parcels   = [];
 
-  for (let i = 0; i < count; i++) {
-    let m = state.currentMonth + i, y = state.currentYear;
-    while (m > 11) { m -= 12; y++; }
-    parcels.push({ month: m, year: y, val: parcelVal, num: i + 1, total: count });
-  }
-
-  // Apply current month parcels to the UI
-  parcels
-    .filter(p => p.month === state.currentMonth && p.year === state.currentYear)
-    .forEach(p => {
-      const sec = state.sections.find(s => s.id === selectedParcelSectionId);
-      if (!sec) return;
-      const id    = crypto.randomUUID();
-      const label = `${title} (${p.num}/${p.total})`;
-      sec.items.push({ id, label, val: String(p.val), parcel: true });
-      const sectionEl = document.querySelector(`.section[data-sid="${selectedParcelSectionId}"]`);
-      if (sectionEl) sectionEl.querySelector('.items-container').appendChild(
-        buildItemRow({ id, label, val: String(p.val), parcel: true }, selectedParcelSectionId)
-      );
-    });
-
-  // Persist future months to Supabase
-  const future    = parcels.filter(p => !(p.month === state.currentMonth && p.year === state.currentYear));
-  const monthsMap = {};
-
-  // Load all future months in parallel
-  await Promise.all(future.map(async p => {
-    const key = `${p.year}_${p.month}`;
-    if (!monthsMap[key]) {
-      const existing = await loadMonthData(p.month, p.year);
-      monthsMap[key] = existing || {
-        incomes:  [{ id: 'main', label: 'Renda principal', val: '' }],
-        sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS)),
-      };
+  try {
+    for (let i = 0; i < count; i++) {
+      let m = state.currentMonth + i, y = state.currentYear;
+      while (m > 11) { m -= 12; y++; }
+      parcels.push({ month: m, year: y, val: parcelVal, num: i + 1, total: count });
     }
-    const data = monthsMap[key];
-    const sec  = data.sections.find(s => s.id === selectedParcelSectionId);
-    if (sec) {
-      sec.items.push({
-        id:     crypto.randomUUID(),
-        label:  `${title} (${p.num}/${p.total})`,
-        val:    String(p.val),
-        parcel: true,
+
+    // Persist future months before changing current UI, avoiding a visibly partial operation.
+    const future    = parcels.filter(p => !(p.month === state.currentMonth && p.year === state.currentYear));
+    const monthsMap = {};
+
+    await Promise.all(future.map(async p => {
+      const key = `${p.year}_${p.month}`;
+      if (!monthsMap[key]) {
+        const existing = await loadMonthData(p.month, p.year);
+        monthsMap[key] = existing || {
+          incomes:  [{ id: 'main', label: 'Renda principal', val: '' }],
+          sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS)),
+        };
+      }
+      const data = monthsMap[key];
+      const sec  = data.sections.find(s => s.id === selectedParcelSectionId);
+      if (sec) {
+        sec.items.push({
+          id:     crypto.randomUUID(),
+          label:  `${title} (${p.num}/${p.total})`,
+          val:    String(p.val),
+          parcel: true,
+        });
+      }
+    }));
+
+    await Promise.all(
+      Object.entries(monthsMap).map(([key, data]) => {
+        const [y, m] = key.split('_').map(Number);
+        return saveMonthData(m, y, data);
+      })
+    );
+
+    parcels
+      .filter(p => p.month === state.currentMonth && p.year === state.currentYear)
+      .forEach(p => {
+        const sec = state.sections.find(s => s.id === selectedParcelSectionId);
+        if (!sec) return;
+        const id    = crypto.randomUUID();
+        const label = `${title} (${p.num}/${p.total})`;
+        sec.items.push({ id, label, val: String(p.val), parcel: true });
+        const sectionEl = document.querySelector(`.section[data-sid="${selectedParcelSectionId}"]`);
+        if (sectionEl) sectionEl.querySelector('.items-container').appendChild(
+          buildItemRow({ id, label, val: String(p.val), parcel: true }, selectedParcelSectionId)
+        );
       });
-    }
-  }));
 
-  // Save all future months in parallel
-  await Promise.all(
-    Object.entries(monthsMap).map(([key, data]) => {
-      const [y, m] = key.split('_').map(Number);
-      return saveMonthData(m, y, data);
-    })
-  );
+    recalc();
+    window.closeParcelModal();
+    const secName = state.sections.find(s => s.id === selectedParcelSectionId)?.title || '';
+    window.showToast(`${count} parcelas de ${title} adicionadas em ${secName}`);
 
-  recalc();
-  window.closeParcelModal();
-  const secName = state.sections.find(s => s.id === selectedParcelSectionId)?.title || '';
-  window.showToast(`${count} parcelas de ${title} adicionadas em ${secName}`);
-
-  // Rebuild month selector to include any new years created by parcels
-  // Import lazily to avoid circular dependency with app.js
-  const { populateMonths } = await import('../app.js');
-  await populateMonths();
+    // Rebuild month selector to include any new years created by parcels
+    // Import lazily to avoid circular dependency with app.js
+    const { populateMonths } = await import('../app.js');
+    await populateMonths();
+  } catch (err) {
+    console.error('confirmParcel:', err);
+    window.showToast('Não foi possível salvar todas as parcelas. Verifique a conexão e tente novamente.', 'error');
+  } finally {
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = originalBtnText;
+  }
 };
 
 document.getElementById('parcelModal').addEventListener('click', function(e) {

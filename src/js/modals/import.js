@@ -12,6 +12,10 @@ import { scheduleSave } from '../persist.js';
 let _importParsed = null;
 let importSecColorIdx = 0;
 
+function getImportMode() {
+  return document.querySelector('input[name="importMode"]:checked')?.value || 'replace';
+}
+
 // Generates the AI prompt based on the current export format
 function buildImportPrompt() {
   const exampleSections = DEFAULT_SECTIONS.slice(0, 3)
@@ -286,6 +290,36 @@ export function renderImportPreview(parsed) {
   });
 }
 
+function mergeImportedData(parsed) {
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const incomingIncomes = clone(parsed.incomes || []);
+  const incomingSections = clone(parsed.sections || []);
+
+  incomingIncomes.forEach((inc, idx) => {
+    const label = inc.label || (idx === 0 ? 'Renda principal' : 'Renda importada');
+    const same = state.incomes.find(i => (i.label || '').trim().toLowerCase() === label.trim().toLowerCase());
+    const next = { ...inc, id: same?.id || (idx === 0 && !state.incomes.some(i => i.id === 'main') ? 'main' : `imp_inc_${Date.now()}_${idx}`), label };
+    if (same) {
+      same.val = next.val;
+    } else {
+      state.incomes.push(next);
+    }
+  });
+
+  incomingSections.forEach(sec => {
+    const same = state.sections.find(s =>
+      s.id === sec.id || (s.title || '').trim().toLowerCase() === (sec.title || '').trim().toLowerCase()
+    );
+    if (same) {
+      same.items = [...(same.items || []), ...(sec.items || []).map(item => ({ ...item, checked: false }))];
+      same.color = same.color || sec.color;
+      same.bg = same.bg || sec.bg;
+    } else {
+      state.sections.push({ ...sec, items: (sec.items || []).map(item => ({ ...item, checked: false })) });
+    }
+  });
+}
+
 window.importNext = async function() {
   const step1 = document.getElementById('importStep1');
   const step2 = document.getElementById('importStep2');
@@ -333,14 +367,20 @@ window.importNext = async function() {
 
   if (!_importParsed) return;
 
-  state.incomes  = _importParsed.incomes;
-  state.sections = _importParsed.sections;
+  if (getImportMode() === 'merge') {
+    mergeImportedData(_importParsed);
+  } else {
+    state.incomes  = _importParsed.incomes;
+    state.sections = _importParsed.sections;
+  }
   renderIncomes();
   renderSections();
   recalc();
   scheduleSave();
   window.closeImportModal();
-  window.showToast(`Dados importados para ${MONTHS[state.currentMonth]} ${state.currentYear}!`);
+  window.showToast(getImportMode() === 'merge'
+    ? `Dados adicionados em ${MONTHS[state.currentMonth]} ${state.currentYear}!`
+    : `Dados importados para ${MONTHS[state.currentMonth]} ${state.currentYear}!`);
 };
 
 window.importGoBack = function() {

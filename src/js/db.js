@@ -4,9 +4,7 @@ import { state } from './state.js';
 // ── Helper: get current user id (cached to avoid repeated network calls) ──
 async function uid() {
   if (state.userId) return state.userId;
-  const { data } = await supabase.auth.getUser();
-  state.userId = data.user?.id ?? null;
-  return state.userId;
+  return null;
 }
 
 // ── Cache local (localStorage) ──

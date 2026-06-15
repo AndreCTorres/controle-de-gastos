@@ -19,6 +19,13 @@ import './modals/goals.js';
 import './modals/import.js';
 import './modals/yearReport.js';
 import { initFeedbackWidget } from './ui/feedback.js';
+import './ui/checkMode.js';
+
+// Fallback for tabs that still have an older module graph cached during local development.
+window.toggleCheckMode ??= function() {
+  state.checkMode = !state.checkMode;
+  window.updateCheckModeUI?.();
+};
 
 // ── Month navigation ──
 
@@ -61,6 +68,7 @@ async function loadMonth() {
   // recalc is imported lazily here to avoid circular dependency
   const { recalc } = await import('./ui/recalc.js');
   recalc();
+  window.updateCheckModeUI?.();
   document.getElementById('sections-container').style.opacity = '1';
 
   if (!fromCache) {
@@ -74,7 +82,7 @@ export async function populateMonths() {
   const dropdown = document.getElementById('monthDropdown');
   dropdown.innerHTML = '';
 
-  let startYear = 2026;
+  let startYear = new Date().getFullYear();
   let endYear   = state.currentYear + 2;
 
   try {
@@ -272,14 +280,21 @@ document.addEventListener('click', function(e) {
 // ── App bootstrap ──
 // Called by auth.js after session is confirmed.
 export async function initApp(user) {
+  if (state.isInitializing) return;
+  state.isInitializing = true;
   document.getElementById('footer-year').textContent = new Date().getFullYear();
-  await populateMonths();
-  state.yearGoals = (await loadYearGoals(state.currentYear)) || {};
-  await loadMonth();
-  initFeedbackWidget();
-  window._checkFabScroll?.();
-  await checkForUpdates(user);
-  await maybeShowWelcome(user);
+  try {
+    await populateMonths();
+    state.yearGoals = (await loadYearGoals(state.currentYear)) || {};
+    await loadMonth();
+    initFeedbackWidget();
+    window._checkFabScroll?.();
+    await checkForUpdates(user);
+    await maybeShowWelcome(user);
+    state.appReady = true;
+  } finally {
+    state.isInitializing = false;
+  }
 }
 
 // ── Update notification ──
@@ -296,44 +311,74 @@ async function checkForUpdates(user) {
 
     if (error || !data) return;
 
-    const seenId = user.user_metadata?.last_update_seen;
+    const seenId = localStorage.getItem(`cgastos_last_update_seen_${state.userId}`);
     if (seenId === data.id) return;
 
     const titleEl = document.createElement('p');
     titleEl.style.cssText = 'font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px';
     titleEl.textContent = data.title;
 
-    const bodyEl = document.createElement('p');
-    bodyEl.style.cssText = 'font-size:13px;color:var(--muted);line-height:1.6';
-    bodyEl.textContent = data.body;
-
     const container = document.getElementById('updateContent');
     container.innerHTML = '';
     container.appendChild(titleEl);
-    container.appendChild(bodyEl);
+    container.appendChild(buildUpdateBody(data.body || ''));
 
     document.getElementById('updateModal').classList.add('open');
     document.getElementById('updateModalBtn').addEventListener('click', async () => {
       closeModal('updateModal');
-      await supabase.auth.updateUser({ data: { last_update_seen: data.id } });
+      localStorage.setItem(`cgastos_last_update_seen_${state.userId}`, data.id);
     }, { once: true });
   } catch (e) { /* silently ignore */ }
+}
+
+function buildUpdateBody(body) {
+  const lines = body
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  let topicLines = lines
+    .map(line => line.replace(/^[-*•]\s*/, '').trim())
+    .filter(Boolean);
+
+  if (lines.length <= 1 && /\s[-*•]\s+/.test(body)) {
+    topicLines = body
+      .replace(/^[-*•]\s*/, '')
+      .split(/\s[-*•]\s+/)
+      .map(line => line.trim())
+      .filter(Boolean);
+  }
+
+  if (topicLines.length >= 2 || lines.some(line => /^[-*•]\s+/.test(line))) {
+    const list = document.createElement('div');
+    list.className = 'update-topic-list';
+    topicLines.forEach(line => {
+      const item = document.createElement('div');
+      item.className = 'update-topic-item';
+      const icon = document.createElement('span');
+      icon.className = 'update-topic-icon';
+      icon.textContent = '✓';
+      const text = document.createElement('span');
+      text.textContent = line;
+      item.appendChild(icon);
+      item.appendChild(text);
+      list.appendChild(item);
+    });
+    return list;
+  }
+
+  const bodyEl = document.createElement('p');
+  bodyEl.className = 'update-body-text';
+  bodyEl.textContent = body;
+  return bodyEl;
 }
 
 // ── Welcome modal ──
 
 async function maybeShowWelcome(user) {
-  // The user object from onAuthStateChange comes from the local JWT cache and may
-  // not reflect metadata updates (e.g. welcome_seen) written in a previous session.
-  // Always fetch fresh metadata from the server before deciding to show the modal.
-  let meta = user.user_metadata;
-  try {
-    const { data } = await supabase.auth.getUser();
-    if (data?.user?.user_metadata) meta = data.user.user_metadata;
-  } catch (_) { /* use cached metadata as fallback */ }
+  const welcomeKey = `cgastos_welcome_seen_${state.userId}`;
+  if (localStorage.getItem(welcomeKey) === 'true') return;
 
-  if (meta?.welcome_seen) return;
-
+  const meta = state.userMeta || user.user_metadata || {};
   const name = meta?.name || user.email.split('@')[0];
   document.getElementById('welcomeModalTitle').textContent = `Olá, ${name}! 👋`;
 
@@ -341,6 +386,6 @@ async function maybeShowWelcome(user) {
 
   document.getElementById('welcomeModalBtn').addEventListener('click', async () => {
     closeModal('welcomeModal');
-    await supabase.auth.updateUser({ data: { welcome_seen: true } });
+    localStorage.setItem(welcomeKey, 'true');
   }, { once: true });
 }

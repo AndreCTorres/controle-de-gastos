@@ -52,5 +52,6 @@ export function recalc() {
   ss.className   = 'val ' + (saldo >= 0 ? 'pos' : 'neg');
 
   updateSummary(secTotals, renda, totalDesp);
+  window.updateCheckModeUI?.();
   scheduleSave();
 }

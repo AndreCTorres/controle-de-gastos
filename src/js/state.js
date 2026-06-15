@@ -14,4 +14,9 @@ export const state = {
   yearGoals:    {},  // { [monthIndex]: { [sectionId]: limitValue } }
   saveTimer:    null,
   userId:       null, // cached after login — avoids repeated getUser() calls
+  isInitializing: false,
+  appReady:     false,
+  userEmail:    '',
+  userMeta:     {},
+  checkMode:    false,
 };

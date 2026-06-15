@@ -6,12 +6,17 @@ import { loadMonthData } from '../db.js';
 import { renderIncomes } from '../ui/income.js';
 import { renderSections } from '../ui/sections.js';
 import { recalc } from '../ui/recalc.js';
+import { persistData } from '../persist.js';
 
 // ── Copy month modal ──
 
 let copySourceMonth = null;
 let copySourceYear  = null;
 let copySelections  = new Set();
+
+function getCopyMode() {
+  return document.querySelector('input[name="copyMode"]:checked')?.value || 'withValues';
+}
 
 window.openCopyModal = async function() {
   let pm = state.currentMonth - 1, py = state.currentYear;
@@ -30,6 +35,20 @@ window.openCopyModal = async function() {
   opts.innerHTML = '';
   copySelections  = new Set();
 
+  const modeBox = document.createElement('div');
+  modeBox.className = 'copy-mode-box';
+  modeBox.innerHTML = `
+    <label class="copy-mode-option">
+      <input type="radio" name="copyMode" value="withValues" checked>
+      <span><strong>Copiar itens e valores</strong><small>Bom para gastos recorrentes.</small></span>
+    </label>
+    <label class="copy-mode-option">
+      <input type="radio" name="copyMode" value="structureOnly">
+      <span><strong>Copiar somente estrutura</strong><small>Traz categorias e itens zerados.</small></span>
+    </label>
+  `;
+  opts.appendChild(modeBox);
+
   const hasIncomes = (prevData.incomes || []).some(i => parseFloat(i.val) > 0);
   if (hasIncomes) {
     addCopyOption(opts, 'rendas', '💵 Rendas',
@@ -38,11 +57,13 @@ window.openCopyModal = async function() {
 
   (prevData.sections || []).forEach(sec => {
     const total = (sec.items || []).reduce((a, i) => a + (parseFloat(i.val) || 0), 0);
-    if (total > 0) addCopyOption(opts, 'sec_' + sec.id, sec.title, fmt(total) + ' em itens preenchidos');
+    const itemCount = (sec.items || []).length;
+    addCopyOption(opts, 'sec_' + sec.id, sec.title,
+      total > 0 ? `${fmt(total)} em ${itemCount} item(ns)` : `${itemCount} item(ns), sem valores preenchidos`);
   });
 
-  if (opts.children.length === 0) {
-    window.showToast(`Sem valores preenchidos em ${MONTHS[pm]} ${py}`, 'error');
+  if (opts.querySelectorAll('.copy-option').length === 0 && !hasIncomes) {
+    window.showToast(`Sem dados em ${MONTHS[pm]} ${py}`, 'error');
     return;
   }
 
@@ -88,24 +109,50 @@ window.confirmCopy = async function() {
 
   const prevData = await loadMonthData(copySourceMonth, copySourceYear);
   if (!prevData) return;
-
-  if (copySelections.has('rendas')) {
-    state.incomes = JSON.parse(JSON.stringify(prevData.incomes || [{ id: 'main', label: 'Renda principal', val: '' }]));
-    renderIncomes();
+  const btn = document.querySelector('#copyModal .modal-btn-primary');
+  const originalText = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Copiando...';
   }
 
-  state.sections = state.sections.map(sec => {
-    const selKey  = 'sec_' + sec.id;
-    if (!copySelections.has(selKey)) return sec;
-    const prevSec = (prevData.sections || []).find(s => s.id === sec.id);
-    if (!prevSec) return sec;
-    return { ...sec, items: JSON.parse(JSON.stringify(prevSec.items)) };
-  });
+  try {
+    if (copySelections.has('rendas')) {
+      state.incomes = JSON.parse(JSON.stringify(prevData.incomes || [{ id: 'main', label: 'Renda principal', val: '' }]));
+      renderIncomes();
+    }
 
-  renderSections();
-  recalc();
-  window.closeCopyModal();
-  window.showToast('Dados copiados com sucesso!');
+    const structureOnly = getCopyMode() === 'structureOnly';
+    const selectedSections = (prevData.sections || [])
+      .filter(prevSec => copySelections.has('sec_' + prevSec.id))
+      .map(prevSec => {
+        const clone = JSON.parse(JSON.stringify(prevSec));
+        clone.items = (clone.items || []).map(item => ({ ...item, checked: false, ...(structureOnly ? { val: '' } : {}) }));
+        return clone;
+      });
+
+    selectedSections.forEach(prevSec => {
+      const idx = state.sections.findIndex(sec =>
+        sec.id === prevSec.id || (sec.title || '').trim().toLowerCase() === (prevSec.title || '').trim().toLowerCase()
+      );
+      if (idx >= 0) state.sections[idx] = prevSec;
+      else state.sections.push(prevSec);
+    });
+
+    renderSections();
+    recalc();
+    await persistData();
+    window.closeCopyModal();
+    window.showToast(structureOnly ? 'Estrutura copiada com valores zerados!' : 'Dados copiados com sucesso!');
+  } catch (err) {
+    console.error('confirmCopy:', err);
+    window.showToast('Não foi possível copiar os dados. Tente novamente.', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
 };
 
 document.getElementById('copyModal').addEventListener('click', function(e) {

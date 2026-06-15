@@ -1,12 +1,12 @@
 import { state } from '../state.js';
 import { MONTHS } from '../constants.js';
-import { supabase } from '../config.js';
 
 // ── Endpoint Formspree ──
 const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xzdqrzgb';
 
 let feedbackTimer  = null;
 let menuOpen       = false;
+let initialized    = false;
 
 // ── Toggle menu ──
 window.toggleFeedbackMenu = function () {
@@ -26,6 +26,7 @@ window.closeFeedbackMenu = closeFeedbackMenu;
 
 // ── Inicialização ──
 export function initFeedbackWidget() {
+  if (initialized) return;
   const fab      = document.getElementById('feedbackFab');
   const form     = document.getElementById('feedbackForm');
   const textarea = document.getElementById('feedbackText');
@@ -33,6 +34,7 @@ export function initFeedbackWidget() {
   const status   = document.getElementById('feedbackStatus');
 
   if (!fab || !form) return;
+  initialized = true;
 
   // Fechar ao clicar fora
   document.addEventListener('click', (e) => {
@@ -54,18 +56,9 @@ export function initFeedbackWidget() {
     status.className   = 'feedback-fab-status';
     status.textContent = '';
 
-    // E-mail do usuário logado
-    let userEmail = '';
-    try {
-      const { data } = await supabase.auth.getUser();
-      userEmail = data?.user?.email ?? '';
-    } catch (_) {
-      // não bloqueia o envio
-    }
-
     const payload = {
       feedback: text,
-      usuario:  userEmail,
+      usuario:  state.userEmail || '',
       mes:      `${MONTHS[state.currentMonth]} ${state.currentYear}`,
     };
 

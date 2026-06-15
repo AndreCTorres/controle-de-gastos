@@ -1,6 +1,7 @@
 import { state } from '../state.js';
 import { scheduleSave } from '../persist.js';
 import { recalc } from './recalc.js';
+import { showConfirmToast } from './toast.js';
 
 // ── Income rows ──
 
@@ -14,6 +15,25 @@ function removeIncomeRow(iid) {
     setTimeout(() => row.remove(), 220);
   }
   setTimeout(recalc, 250);
+}
+
+function confirmRemoveIncomeRow(income) {
+  showConfirmToast(msgDiv => {
+    msgDiv.append('Remover a renda ');
+    const strong = document.createElement('strong');
+    strong.textContent = `"${income.label || 'adicional'}"`;
+    msgDiv.appendChild(strong);
+    msgDiv.append('?');
+  }, [
+    {
+      label: 'Remover',
+      style: { background: 'var(--danger)' },
+      onClick: () => {
+        removeIncomeRow(income.id);
+        window.showToast('Renda removida');
+      },
+    },
+  ]);
 }
 
 export function buildIncomeRow(income) {
@@ -32,7 +52,7 @@ export function buildIncomeRow(income) {
     recalc();
   });
   row.querySelector('.income-label input').addEventListener('input', scheduleSave);
-  if (canRemove) row.querySelector('.remove-income-btn').addEventListener('click', () => removeIncomeRow(income.id));
+  if (canRemove) row.querySelector('.remove-income-btn').addEventListener('click', () => confirmRemoveIncomeRow(income));
   return row;
 }
 

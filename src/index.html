@@ -168,6 +168,22 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Relatório anual
     </button>
+    <button class="new-section-btn check-mode-launch-btn" onclick="toggleCheckMode()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Modo conferência
+    </button>
+  </div>
+
+  <div class="check-mode-bar" id="checkModeBar" hidden>
+    <div class="check-mode-info">
+      <span class="check-mode-title">Modo conferência</span>
+      <span class="check-mode-progress" id="checkModeProgress">0/0 itens conferidos</span>
+    </div>
+    <div class="check-mode-track"><div class="check-mode-fill" id="checkModeFill"></div></div>
+    <div class="check-mode-actions">
+      <button class="check-mode-btn secondary" onclick="resetMonthChecks()">Limpar marcações</button>
+      <button class="check-mode-btn" onclick="toggleCheckMode()">Sair</button>
+    </div>
   </div>
 
   <div style="padding-bottom:8px"></div>
@@ -408,12 +424,28 @@
 
       <!-- Passo 2: Preview -->
       <div id="importStep2" style="display:none">
-        <p class="modal-desc" style="margin-bottom:10px">Revise os dados antes de importar. O que você aprovar vai substituir o mês atual.</p>
+        <p class="modal-desc" style="margin-bottom:10px">Revise os dados antes de importar e escolha como aplicar no mês atual.</p>
+        <div class="import-mode-box" role="radiogroup" aria-label="Como importar os dados">
+          <label class="import-mode-option">
+            <input type="radio" name="importMode" value="replace" checked>
+            <span>
+              <strong>Substituir o mês atual</strong>
+              <small>Remove os dados atuais e usa somente o CSV.</small>
+            </span>
+          </label>
+          <label class="import-mode-option">
+            <input type="radio" name="importMode" value="merge">
+            <span>
+              <strong>Adicionar aos dados atuais</strong>
+              <small>Mantém o que já existe e acrescenta os itens importados.</small>
+            </span>
+          </label>
+        </div>
         <div class="import-preview-body-wrap" id="importPreviewBodyWrap">
           <div id="importPreviewBody" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-right:2px"></div>
         </div>
         <div style="margin-top:12px;padding:10px 14px;background:#FDF8E4;border:1px solid #E8D97A;border-radius:8px;font-size:12px;color:#7A6010">
-          ⚠ A importação <strong>substitui</strong> os dados do mês <span id="importTargetMonthLabel"></span>. Esta ação pode ser desfeita recarregando os dados do mês anterior.
+          ⚠ Confira a opção escolhida acima antes de importar para <span id="importTargetMonthLabel"></span>.
         </div>
       </div>
 
