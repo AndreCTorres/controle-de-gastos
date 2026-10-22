@@ -27,6 +27,7 @@ export function recalc(save = true) {
     totalDesp = (Math.round(totalDesp * 100) + Math.round(sub * 100)) / 100;
     const tot = el.querySelector('.section-total');
     if (tot) tot.textContent = fmt(sub);
+    const remove=el.querySelector('.section-del-btn');if(remove){const imported=sec?.items.some(i=>i.invoiceId);remove.disabled=!!imported;remove.title=imported?'Mova os lançamentos da fatura para outra categoria antes de remover esta.':'Remover categoria';}
 
     // Goal indicator per category
     const goal = parseFloat(monthGoals[sid]) || 0;
@@ -54,6 +55,7 @@ export function recalc(save = true) {
   ss.className   = 'val ' + (saldo >= 0 ? 'pos' : 'neg');
 
   updateSummary(secTotals, renda, totalDesp);
+  window.renderInvoicePanel?.();
   window.updateCheckModeUI?.();
   if (save) scheduleSave();
 }

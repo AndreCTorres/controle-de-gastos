@@ -64,7 +64,7 @@ export function removeItem(sid, iid) {
   if (!item) return;
 
   // Case 1: installment — special flow
-  if (item.parcel) {
+  if (item.parcel && !item.invoiceId) {
     const baseTitle    = item.label.replace(/\s*\(\d+\/\d+\)\s*$/, '').trim();
     const matchTotal   = item.label.match(/\((\d+)\/(\d+)\)$/);
     const totalParcels = matchTotal ? parseInt(matchTotal[2]) : 0;
@@ -182,7 +182,7 @@ export function moveItemToSection(iid, fromSid, toSid) {
   if (itemIdx === -1) return;
   const item = fromSec.items[itemIdx];
 
-  if (item.parcel) {
+  if (item.parcel && !item.invoiceId) {
     const baseTitle    = item.label.replace(/\s*\(\d+\/\d+\)\s*$/, '').trim();
     const matchTotal   = item.label.match(/\((\d+)\/(\d+)\)$/);
     const totalParcels = matchTotal ? parseInt(matchTotal[2]) : 0;
@@ -238,6 +238,7 @@ function _doMoveItemToSection(iid, fromSid, toSid) {
   const itemIdx = fromSec.items.findIndex(i => i.id === iid);
   if (itemIdx === -1) return;
   const [item] = fromSec.items.splice(itemIdx, 1);
+  if(item.invoiceId){item.needsReview=false;item.categoryConfirmed=true;item.categoryOrigin='manual';}
 
   toSec.items.push(item);
 
@@ -331,7 +332,7 @@ export function buildItemRow(item, sid) {
   row.dataset.iid = item.id;
   row.dataset.sid = sid;
   if (item.parcel) row.dataset.parcel = 'true';
-  row.draggable = true;
+  row.draggable = true;row.classList.toggle('invoice-credit',!!item.invoiceId&&cents(item.val)<0);
   row.innerHTML = `
     <div class="item-drag-handle" title="Arrastar para outra categoria">⠿</div>
     <button class="item-check-toggle" type="button" title="Marcar como conferido" aria-label="Marcar item como conferido">
@@ -340,7 +341,7 @@ export function buildItemRow(item, sid) {
     <div class="item-label"><input class="label-input" type="text" placeholder="Nome do item" maxlength="120" value="${String(item.label || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"></div>
     <div class="item-amount">
       <span class="prefix">R$</span>
-      <input class="amount-input" type="number" placeholder="—" step="0.01" min="0" max="9999999" value="${item.val === '' ? '' : (cents(item.val)/100).toFixed(2)}">
+      <input class="amount-input" type="number" placeholder="—" step="0.01" min="-9999999" max="9999999" value="${item.val === '' ? '' : (cents(item.val)/100).toFixed(2)}">
     </div>
     <div class="item-actions">
       <button class="move-btn" title="Mover para outra categoria" aria-label="Mover item para outra categoria">
@@ -350,10 +351,11 @@ export function buildItemRow(item, sid) {
       <button class="del-btn" title="Remover item" aria-label="Remover item">×</button>
     </div>`;
 
+  if(item.invoiceId){const value=row.querySelector('.amount-input');value.readOnly=true;value.title='Valor do PDF da fatura';for(const selector of ['.clear-btn','.del-btn']){row.querySelector(selector).disabled=true;row.querySelector(selector).title='Para remover estes dados, use Desfazer importação';}if(item.needsReview&&!item.categoryConfirmed){const badge=document.createElement('span');badge.className='invoice-review-tag';badge.textContent='Revisar';row.querySelector('.item-label').append(badge);}}
   row.querySelector('.amount-input').addEventListener('input', e => {
     // Clamp negative values and scientific notation on the fly
     const raw = parseFloat(e.target.value);
-    if (Number.isFinite(raw) && (raw < 0 || raw > 9999999 || /\.\d{3,}/.test(e.target.value))) e.target.value = Math.min(9999999, Math.max(0, Math.round((raw+Number.EPSILON)*100)/100)).toFixed(2);
+    if (Number.isFinite(raw) && (raw < -9999999 || raw > 9999999 || /\.\d{3,}/.test(e.target.value))) e.target.value = Math.min(9999999, Math.max(-9999999, Math.round((raw+Number.EPSILON)*100)/100)).toFixed(2);
     item.val = e.target.value;
     recalc();
   });

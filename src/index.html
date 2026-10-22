@@ -133,6 +133,7 @@
     </div>
   </div>
 
+  <section id="invoicePanel" aria-label="Faturas importadas" hidden></section>
   <div class="summary-row">
     <div class="chart-card">
       <div class="chart-card-title">Distribuição de Despesas</div>
@@ -592,6 +593,15 @@
   <div class="modal-header"><div class="modal-title" id="syncModalTitle">Salvamento e backup</div><button class="modal-close" aria-label="Fechar" onclick="document.getElementById('syncModal').classList.remove('open')">×</button></div>
   <div class="modal-body" id="syncDetails"></div>
   <div class="modal-footer"><button class="modal-btn-cancel" id="backupDownloadBtn" onclick="downloadFullBackup()">Baixar backup completo</button><button class="modal-btn-primary" onclick="retrySync()">Sincronizar agora</button></div>
+ </div>
+</div>
+
+
+<div class="modal-overlay" id="invoiceReviewModal" role="dialog" aria-modal="true" aria-labelledby="invoiceReviewTitle">
+ <div class="modal invoice-review-modal">
+  <div class="modal-header"><div class="modal-title" id="invoiceReviewTitle">Conferir categorias da fatura</div><button class="modal-close" aria-label="Fechar revisão" onclick="closeInvoiceReview()">×</button></div>
+  <div class="modal-body"><p id="invoiceReviewCount" class="invoice-details"></p><label class="invoice-review-filter"><input id="invoiceReviewAll" type="checkbox"> Mostrar todos os lançamentos</label><div id="invoiceReviewBody"></div></div>
+  <div class="modal-footer"><button class="modal-btn-cancel" onclick="closeInvoiceReview()">Fechar</button><button class="modal-btn-primary" id="invoiceReviewSave" onclick="confirmInvoiceReview()">Confirmar exibidos</button></div>
  </div>
 </div>
 

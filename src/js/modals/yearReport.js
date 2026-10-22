@@ -187,7 +187,7 @@ window.openYearReport = async function() {
     monthTotals.forEach(d => {
       const v = d?.bySec[sid] || 0;
       if (d) {
-        if (v > 0) {
+        if (v !== 0) {
           tr.appendChild(makeTd(fmt(v)));
         } else {
           const td = document.createElement('td');
@@ -202,7 +202,7 @@ window.openYearReport = async function() {
         tr.appendChild(makeTd('—', 'yr-empty'));
       }
     });
-    tr.appendChild(makeStrongTd(secTotal > 0 ? fmt(secTotal) : '—'));
+    tr.appendChild(makeStrongTd(secTotal !== 0 ? fmt(secTotal) : '—'));
     tbody.appendChild(tr);
   });
 

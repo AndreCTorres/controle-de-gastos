@@ -1180,3 +1180,24 @@ body.check-mode-active .item-label input,body.check-mode-active .item-amount inp
  .modal-footer>button{min-height:40px}
  .save-toolbar{padding:0 12px}
 }
+
+.invoice-card{margin:0 0 16px;padding:18px 20px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 1px 4px #0000000b}
+.invoice-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--primary);font-size:16px}
+.invoice-head>strong:last-child{font-family:'DM Serif Display',serif;font-size:23px;white-space:nowrap}
+.invoice-ok{color:var(--green);font-size:13px;margin:8px 0}
+.invoice-warning{color:var(--danger);font-weight:600}
+.invoice-details{font-size:12px;line-height:1.55;color:var(--muted);margin:6px 0}
+.invoice-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px}
+.invoice-actions a{font-size:12px;color:var(--primary);text-decoration:underline}
+.invoice-undo{font:inherit;font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:8px 0}
+.invoice-review-modal{width:720px;max-width:92vw}
+.invoice-review-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:12px;padding:13px 0;border-bottom:1px solid var(--border);align-items:center}
+.invoice-review-row strong{display:block;line-height:1.4;font-size:13px;overflow-wrap:anywhere}
+.invoice-review-row select{width:100%;min-width:0;min-height:40px;font:inherit;font-size:12px;border:1px solid var(--border);border-radius:7px;padding:8px;color:var(--text);background:white}
+.invoice-review-filter{display:flex;align-items:center;gap:8px;font-size:13px;margin:12px 0}
+.invoice-review-tag{font-size:9px;color:#805c12;background:#FFF4D6;border-radius:5px;padding:2px 4px;flex-shrink:0;margin-left:5px}
+.item-label input{min-width:0;flex:1}
+.item-row.invoice-credit .amount-input{color:var(--green)}
+.item-actions button:disabled,.section-del-btn:disabled{opacity:.2;cursor:default}
+@media(max-width:767px){.invoice-card{padding:14px}.invoice-head{align-items:flex-start;font-size:14px}.invoice-head>strong:last-child{font-size:21px}.invoice-review-row{grid-template-columns:1fr;gap:3px}.invoice-actions{gap:10px}.invoice-actions .modal-btn-primary{width:100%}}
+@media print{.invoice-actions{display:none}.invoice-card{break-inside:avoid}}

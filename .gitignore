@@ -54,3 +54,6 @@ build/
 .private-backup/
 .netlify/
 .review/
+
+__pycache__/
+*.pyc

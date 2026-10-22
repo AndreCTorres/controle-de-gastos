@@ -153,3 +153,19 @@ values (
 Execute `supabase/reliability.sql` antes de publicar esta versão. A função `save_finance_batch` usa SECURITY INVOKER, mantém as políticas RLS, exige conta autenticada igual à conta de origem e faz todas as gravações de um lote ou nenhuma. O arquivo é idempotente. Não altera os lançamentos existentes.
 
 Rode `npm test`. Os testes cobrem centavos, virada de ano, categoria personalizada, CSV, importação repetida, fila offline, recarga, gravação em andamento, conflitos entre abas e isolamento de usuários. O banco foi validado com transações revertidas; os testes de interface usam dados fictícios. A pasta `.private-backup` nunca deve ser publicada.
+
+## Faturas Nubank
+
+Execute, depois de `reliability.sql`, nesta ordem: `invoices-schema.sql`, `invoices-classification.sql`, `invoices-import.sql`, `invoices-triggers.sql` e `invoices-text-import.sql`. As funções usam a conta autenticada e RLS; a chave de serviço nunca deve ficar no navegador.
+
+O fluxo de importação recebe o texto completo do PDF e o nome original `Nubank_AAAA-MM-DD.pdf`. `preview_nubank_text` extrai os lançamentos e exige que compras, créditos, saldo anterior e eventual arredondamento de até um centavo confiram com o total da fatura. `import_nubank_text` importa esse resultado atomicamente usando a versão atual do mês. O mês da fatura é o mês do vencimento. Um mesmo vencimento não é importado duas vezes; uma versão diferente ou conflito com lançamentos manuais exige conferência.
+
+O painel mostra a conciliação e permite revisar categorias. As correções confirmadas são aprendidas por estabelecimento/cartão, sem criar uma regra quando o mesmo estabelecimento pertence a pessoas diferentes. Valores do PDF ficam protegidos contra edição acidental. Desfazer remove somente os itens daquela importação, mantendo os outros lançamentos. Uma fatura desfeita não é recolocada automaticamente. O backup inclui importações, regras e cartões associados à conta.
+
+A importação não preenche salário, despesas fora do cartão ou parcelas futuras. Ao copiar o mês anterior para um mês com fatura importada, somente as rendas são copiadas, para evitar duplicar despesas legadas. Créditos e estornos reduzem as despesas e são mantidos no CSV com sua origem.
+
+A rotina mensal pode usar as conexões existentes de Gmail e Supabase em uma tarefa do ChatGPT. O código do site não armazena senha de e-mail nem token Google; a rotina depende dessas conexões permanecerem ativas. O procedimento procura a fatura, confere o PDF pelo parser do banco, importa com verificação de versão e comunica o resultado ou uma divergência que exija intervenção.
+
+Como alternativa local, instale `scripts/requirements.txt` e execute `python scripts/nubank_pdf.py caminho/da/fatura.pdf resultado.json`. PDFs e JSONs financeiros devem ficar fora de `src`, de commits e de logs públicos.
+
+Validação: `npm test` e `python -m unittest discover -s tests -p test_nubank_pdf.py`. Os testes usam somente dados fictícios.

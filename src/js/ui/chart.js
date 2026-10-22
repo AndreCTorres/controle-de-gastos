@@ -3,6 +3,7 @@ import { state } from '../state.js';
 
 // ── Donut chart ──
 export function drawDonut(slices) {
+  slices=slices.filter(s=>s.val>0);
   const canvas = document.getElementById('donutChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -36,14 +37,15 @@ export function drawDonut(slices) {
 
 // ── Summary panel (chart + legend + pct list + section progress) ──
 export function updateSummary(secTotals, renda, totalDesp) {
+  const distributionTotal=secTotals.reduce((sum,s)=>sum+Math.max(0,s.total),0);
   drawDonut(secTotals.map(s => ({ color: s.color, val: s.total })));
   document.getElementById('chart-total').textContent = fmt(totalDesp);
 
   const leg = document.getElementById('chart-legend');
   leg.innerHTML = '';
   secTotals.forEach(s => {
-    if (s.total <= 0) return;
-    const p = pct(s.total, totalDesp);
+    if (s.total === 0) return;
+    const p = pct(s.total, distributionTotal);
     const safeColor = /^#[0-9A-Fa-f]{3,8}$/.test(s.color || '') ? s.color : '#888';
 
     const el = document.createElement('div');
@@ -59,14 +61,14 @@ export function updateSummary(secTotals, renda, totalDesp) {
 
     const pctEl = document.createElement('span');
     pctEl.className = 'legend-pct';
-    pctEl.textContent = p + '%';
+    pctEl.textContent = s.total<0?'crédito':p+'%';
 
     el.appendChild(dot);
     el.appendChild(labelEl);
     el.appendChild(pctEl);
     leg.appendChild(el);
   });
-  if (totalDesp === 0) {
+  if (distributionTotal === 0) {
     leg.innerHTML = '<div style="font-size:11px;color:var(--muted);opacity:0.6">Nenhuma despesa registrada</div>';
   }
 
@@ -74,7 +76,7 @@ export function updateSummary(secTotals, renda, totalDesp) {
   pctList.innerHTML = '';
   secTotals.forEach(s => {
     const pctRenda = renda > 0 ? Math.round(s.total / renda * 100) : 0;
-    const pctDesp  = pct(s.total, totalDesp);
+    const pctDesp  = pct(s.total, distributionTotal);
     const safeColor = /^#[0-9A-Fa-f]{3,8}$/.test(s.color || '') ? s.color : '#888';
 
     const item = document.createElement('div');
@@ -102,7 +104,7 @@ export function updateSummary(secTotals, renda, totalDesp) {
     track.className = 'pct-bar-track';
     const fill = document.createElement('div');
     fill.className = 'pct-bar-fill';
-    fill.style.width = Math.min(pctDesp, 100) + '%';
+    fill.style.width = Math.max(0,Math.min(pctDesp, 100)) + '%';
     fill.style.background = safeColor;
     track.appendChild(fill);
 
@@ -117,9 +119,9 @@ export function updateSummary(secTotals, renda, totalDesp) {
     if (!sec) return;
     const fillEl = el.querySelector('.section-progress-fill');
     if (!fillEl) return;
-    const p = pct(sec.total, totalDesp);
+    const p = pct(sec.total, distributionTotal);
     const safeColor = /^#[0-9A-Fa-f]{3,8}$/.test(sec.color || '') ? sec.color : '#888';
-    fillEl.style.width      = p + '%';
+    fillEl.style.width      = Math.max(0,Math.min(100,p)) + '%';
     fillEl.style.background = safeColor;
   });
 }

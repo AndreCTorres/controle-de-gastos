@@ -58,7 +58,9 @@ window.openCopyModal = async function() {
       `${(prevData.incomes || []).filter(i => parseFloat(i.val) > 0).length} fonte(s) de renda`);
   }
 
-  (prevData.sections || []).forEach(sec => {
+  const invoiceMonth=(state.invoiceImports??[]).some(inv=>inv.status==='applied');
+  if(invoiceMonth){const note=document.createElement('p');note.className='invoice-details';note.textContent='Este mês já tem uma fatura importada. Para evitar repetir gastos, a cópia traz somente as rendas.';opts.append(note);}
+  (invoiceMonth?[]:(prevData.sections || [])).forEach(sec => {
     const total = (sec.items || []).reduce((a, i) => a + (parseFloat(i.val) || 0), 0);
     const itemCount = (sec.items || []).length;
     addCopyOption(opts, 'sec_' + sec.id, sec.title,

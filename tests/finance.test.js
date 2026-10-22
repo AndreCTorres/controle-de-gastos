@@ -36,7 +36,7 @@ test('CSV round trip preserves quotes, semicolons, multiline labels, metadata an
 test('CSV reads large Brazilian decimal values and rejects malformed rows',()=>{
  const input='Salário;1250,50\nCasa;color:;bg:\nConta;1.234,56';
  const data=parseImportCsv(input);assert.equal(data.incomes[0].val,'1250.50');assert.equal(data.sections[0].items[0].val,'1234.56');
- for(const bad of ['abc','-1','1,234'])assert.throws(()=>parseImportCsv(input.replace('1.234,56',bad)));
+ for(const bad of ['abc','1.234,567','1,234'])assert.throws(()=>parseImportCsv(input.replace('1.234,56',bad)));
  assert.throws(()=>parseImportCsv('Salário;10\nCasa;color:;bg:\n"sem fechar;20'));
 });
 test('repeated merge import skips equal entries and never overwrites another income',()=>{

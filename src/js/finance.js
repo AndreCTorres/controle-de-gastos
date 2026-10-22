@@ -55,7 +55,7 @@ export function captureMonth(state, doc) {
 export function csvField(value) {
   let s=String(value??'');
   // An initial apostrophe stops spreadsheet formula execution; the importer removes this escape.
-  if (/^[\s]*[=+\-@\t\r]/.test(s)) s="'"+s;
+  if (/^[\s]*[=+\-@\t\r]/.test(s) && !/^-?\d+(?:[.,]\d+)?$/.test(s)) s="'"+s;
   return '"'+s.replace(/"/g,'""')+'"';
 }
 export function csvRows(text) {
@@ -77,7 +77,7 @@ export function exportMonthCsv(data, monthLabel, year) {
   const rows=[['Controle de Gastos - '+monthLabel+' '+year],[],['RENDAS']];
   for(const inc of data.incomes)rows.push([inc.label,(cents(inc.val)/100).toFixed(2).replace('.',',')]);
   rows.push(['Total Renda',sumValues(data.incomes).toFixed(2).replace('.',',')]);
-  for(const sec of data.sections){rows.push([],[sec.title,'color:'+sec.color,'bg:'+sec.bg,'id:'+sec.id]);for(const item of sec.items)rows.push([item.label,(cents(item.val)/100).toFixed(2).replace('.',','),'meta:'+JSON.stringify(Object.fromEntries(['id','parcel','purchaseId','parcelNumber','parcelCount','checked'].filter(k=>item[k]!=null).map(k=>[k,item[k]])))]);}
+  for(const sec of data.sections){rows.push([],[sec.title,'color:'+sec.color,'bg:'+sec.bg,'id:'+sec.id]);for(const item of sec.items)rows.push([item.label,(cents(item.val)/100).toFixed(2).replace('.',','),'meta:'+JSON.stringify(Object.fromEntries(['id','parcel','purchaseId','parcelNumber','parcelCount','checked','source','invoiceId','invoicePosition','transactionDate','merchant','merchantKey','cardLast4','sourceCardLast4','originalAmountCents','invoiceKind','needsReview','categoryOrigin','categoryConfirmed'].filter(k=>item[k]!=null).map(k=>[k,item[k]])))]);}
   const t=monthTotals(data);rows.push([],['TOTAL DESPESAS',t.expenses.toFixed(2).replace('.',',')],['SALDO',t.balance.toFixed(2).replace('.',',')]);
   return '\uFEFF'+rows.map(row=>row.map(csvField).join(';')).join('\r\n');
 }
@@ -87,9 +87,9 @@ export function copyPreviousMonth(current,previous,options){
  if(options.incomes)data.incomes=clone(previous.incomes??[]).map(i=>({...i,...(options.structureOnly?{val:''}:{})}));
  for(const source of previous.sections??[]){
   if(!options.sections.includes(source.id))continue;
-  const next=clone(source);next.items=(next.items??[]).filter(i=>!i.parcel).map(i=>({...i,checked:false,...(options.structureOnly?{val:''}:{})}));
+  const next=clone(source);next.items=(next.items??[]).filter(i=>!i.parcel&&!i.invoiceId).map(i=>({...i,checked:false,...(options.structureOnly?{val:''}:{})}));
   const index=data.sections.findIndex(s=>s.id===source.id||s.title.trim().toLowerCase()===source.title.trim().toLowerCase());
-  if(index>=0){next.items.push(...data.sections[index].items.filter(i=>i.parcel));data.sections[index]=next;}
+  if(index>=0){next.items.push(...data.sections[index].items.filter(i=>i.parcel||i.invoiceId));data.sections[index]=next;}
   else data.sections.push(next);
  }
  return data;

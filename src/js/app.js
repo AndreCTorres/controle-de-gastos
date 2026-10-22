@@ -1,3 +1,4 @@
+import { loadInvoiceImports } from './ui/invoices.js';
 import { persistData, snapshotCurrent, resetSaveSnapshot } from './persist.js';
 import { exportMonthCsv } from './finance.js';
 import { supabase } from './config.js';
@@ -37,11 +38,11 @@ export async function loadMonth() {
   const main=document.querySelector('.main');
   state.loading=true;state.monthReady=false;main.inert=true;main.setAttribute('aria-busy','true');
   try{
-    const [data,goals]=await Promise.all([loadMonthData(month,year),loadYearGoals(year)]);
+    const [data,goals,invoices]=await Promise.all([loadMonthData(month,year),loadYearGoals(year),loadInvoiceImports(month,year)]);
     if(state.userId!==user||state.currentMonth!==month||state.currentYear!==year)return false;
     state.incomes=data?.incomes??[{id:'main',label:'Renda principal',val:''}];
     state.sections=(data?.sections??structuredClone(DEFAULT_SECTIONS)).map(s=>({...s,bg:s.bg||'#F0F0F0'}));
-    state.yearGoals=goals??{};
+    state.yearGoals=goals??{};state.invoiceImports=invoices;
     renderIncomes();renderSections();resetSaveSnapshot();
     const {recalc}=await import('./ui/recalc.js');recalc(false);
     state.monthReady=true;window.dispatchEvent(new CustomEvent('finance:sync'));return true;

@@ -5,7 +5,7 @@ function numeric(raw,line){
   let s=String(raw??'').trim().replace(/^R\$\s*/,'');
   if(/^\d{1,3}(?:\.\d{3})+$/.test(s))s=s.replace(/\./g,'');
   let value;try{value=cents(s);}catch{throw Error('Valor inválido na linha '+line+': '+raw+'. Use, por exemplo, 1250,50.');}
-  if(value<0)throw Error('Valor negativo na linha '+line+'. Registre um valor maior ou igual a zero.');
+
   return s===''?'':(value/100).toFixed(2);
 }
 export function parseImportCsv(raw){
@@ -31,11 +31,11 @@ export function parseImportCsv(raw){
     if(fields.length===1){const def=DEFAULT_SECTIONS.find(s=>s.title.toLowerCase()===label.toLowerCase());if(def){section={...structuredClone(def),items:[]};sections.push(section);continue;}}
     if(fields.length<2||fields.length>3)throw Error('Linha '+(index+1)+' fora do formato nome;valor. Descrições com ponto e vírgula precisam de aspas.');
     const val=numeric(fields[1],index+1);
-    if(!section){incomes.push({id:incomes.length===0?'main':newId(),label,val});continue;}
+    if(!section){if(cents(val)<0)throw Error('Renda negativa na linha '+(index+1)+'.');incomes.push({id:incomes.length===0?'main':newId(),label,val});continue;}
     let metadata={};
     if(fields[2]){
       if(!fields[2].startsWith('meta:'))throw Error('Coluna extra desconhecida na linha '+(index+1)+'.');
-      try{const source=JSON.parse(fields[2].slice(5));for(const key of ['id','parcel','purchaseId','parcelNumber','parcelCount','checked'])if(source[key]!=null)metadata[key]=source[key];}catch{throw Error('Metadados inválidos na linha '+(index+1)+'.');}
+      try{const source=JSON.parse(fields[2].slice(5));for(const key of ['id','parcel','purchaseId','parcelNumber','parcelCount','checked','source','invoiceId','invoicePosition','transactionDate','merchant','merchantKey','cardLast4','sourceCardLast4','originalAmountCents','invoiceKind','needsReview','categoryOrigin','categoryConfirmed'])if(source[key]!=null)metadata[key]=source[key];}catch{throw Error('Metadados inválidos na linha '+(index+1)+'.');}
     }
     section.items.push({...metadata,id:typeof metadata.id==='string'?metadata.id:newId(),label,val});
   }
