@@ -1,3 +1,5 @@
+import { persistData, snapshotCurrent, resetSaveSnapshot } from './persist.js';
+import { exportMonthCsv } from './finance.js';
 import { supabase } from './config.js';
 import { loadMonthData, loadYearGoals, loadMonthsWithData } from './db.js';
 import { state } from './state.js';
@@ -29,54 +31,34 @@ window.toggleCheckMode ??= function() {
 
 // ── Month navigation ──
 
-async function loadMonth() {
-  document.getElementById('sections-container').style.opacity = '0.5';
 
-  let data = null;
-  let fromCache = false;
-  try {
-    data = await loadMonthData(state.currentMonth, state.currentYear);
-  } catch (err) {
-    document.getElementById('sections-container').style.opacity = '1';
-
-    if (err.fromCache && err.cachedData) {
-      data      = err.cachedData;
-      fromCache = true;
-      const { showOfflineBanner } = await import('./ui/offline.js');
-      showOfflineBanner();
-    } else {
-      window.showToast('Erro ao carregar dados. Verifique sua conexão e tente novamente.', 'error');
-      return;
-    }
-  }
-
-  if (data) {
-    state.incomes  = data.incomes  || [{ id: 'main', label: 'Renda principal', val: '' }];
-    state.sections = data.sections || JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
-    state.sections = state.sections.map(s => {
-      const def = DEFAULT_SECTIONS.find(d => d.id === s.id);
-      return { ...s, bg: s.bg || (def ? def.bg : '#F0F0F0') };
-    });
-  } else {
-    state.incomes  = [{ id: 'main', label: 'Renda principal', val: '' }];
-    state.sections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
-  }
-
-  renderIncomes();
-  renderSections();
-
-  // recalc is imported lazily here to avoid circular dependency
-  const { recalc } = await import('./ui/recalc.js');
-  recalc();
-  window.updateCheckModeUI?.();
-  document.getElementById('sections-container').style.opacity = '1';
-
-  if (!fromCache) {
-    const { hideOfflineBanner } = await import('./ui/offline.js');
-    hideOfflineBanner();
-  }
+export async function loadMonth() {
+  const month=state.currentMonth,year=state.currentYear,user=state.userId;
+  const main=document.querySelector('.main');
+  state.loading=true;state.monthReady=false;main.inert=true;main.setAttribute('aria-busy','true');
+  try{
+    const [data,goals]=await Promise.all([loadMonthData(month,year),loadYearGoals(year)]);
+    if(state.userId!==user||state.currentMonth!==month||state.currentYear!==year)return false;
+    state.incomes=data?.incomes??[{id:'main',label:'Renda principal',val:''}];
+    state.sections=(data?.sections??structuredClone(DEFAULT_SECTIONS)).map(s=>({...s,bg:s.bg||'#F0F0F0'}));
+    state.yearGoals=goals??{};
+    renderIncomes();renderSections();resetSaveSnapshot();
+    const {recalc}=await import('./ui/recalc.js');recalc(false);
+    state.monthReady=true;window.dispatchEvent(new CustomEvent('finance:sync'));return true;
+  }catch(error){window.showToast('Não foi possível carregar este mês. Tente novamente com conexão.','error');throw error;}
+  finally{state.loading=false;main.inert=!state.monthReady;main.removeAttribute('aria-busy');}
 }
-
+window.reloadCurrentMonth=loadMonth;
+async function navigateMonth(month,year){
+  if(state.loading||state.busy)return;
+  try{await persistData();}catch(error){if(error.code==='LOCAL_STORAGE')return;} // Every edit is already in the durable outbox.
+  const oldMonth=state.currentMonth,oldYear=state.currentYear;
+  state.currentMonth=month;state.currentYear=year;
+  try{await loadMonth();}
+  catch{state.currentMonth=oldMonth;state.currentYear=oldYear;state.monthReady=true;document.querySelector('.main').inert=false;}
+  updateMonthChipLabel();
+  document.querySelectorAll('.month-opt').forEach(o=>o.classList.toggle('selected',Number(o.dataset.m)===state.currentMonth&&Number(o.dataset.y)===state.currentYear));
+}
 export async function populateMonths() {
 
   const dropdown = document.getElementById('monthDropdown');
@@ -104,21 +86,14 @@ export async function populateMonths() {
       const opt       = document.createElement('div');
       opt.className   = 'month-opt' + (i === state.currentMonth && y === state.currentYear ? ' selected' : '');
       opt.textContent = `${m} ${y}`;
+      opt.setAttribute('role','option');opt.tabIndex=0;
+      opt.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();opt.click();}});
       opt.dataset.m   = i;
       opt.dataset.y   = y;
       opt.addEventListener('click', async function(e) {
         e.stopPropagation();
-        const prevYear = state.currentYear;
-        state.currentMonth = parseInt(this.dataset.m);
-        state.currentYear  = parseInt(this.dataset.y);
-        updateMonthChipLabel();
-        dropdown.querySelectorAll('.month-opt').forEach(o => o.classList.remove('selected'));
-        this.classList.add('selected');
         closeMonthDropdown();
-        if (state.currentYear !== prevYear) {
-          loadYearGoals(state.currentYear).then(g => { state.yearGoals = g || {}; }).catch(() => {});
-        }
-        await loadMonth();
+        await navigateMonth(Number(this.dataset.m),Number(this.dataset.y));
       });
       dropdown.appendChild(opt);
     });
@@ -136,7 +111,7 @@ window.toggleMonthDropdown = function() {
   if (isOpen) {
     closeMonthDropdown();
   } else {
-    chip.classList.add('open');
+    chip.classList.add('open');chip.setAttribute('aria-expanded','true');
     setTimeout(() => {
       const sel = document.getElementById('monthDropdown').querySelector('.month-opt.selected');
       if (sel) sel.scrollIntoView({ block: 'nearest' });
@@ -145,44 +120,16 @@ window.toggleMonthDropdown = function() {
 };
 
 function closeMonthDropdown() {
-  document.getElementById('monthChip').classList.remove('open');
+  document.getElementById('monthChip').classList.remove('open');document.getElementById('monthChip').setAttribute('aria-expanded','false');
 }
 
 // ── CSV Export ──
 
-window.exportCSV = function() {
-  const renda = getTotalIncome();
-  let csv = `Controle de Gastos - ${MONTHS[state.currentMonth]} ${state.currentYear}\n\nRENDAS\n`;
 
-  state.incomes.forEach(inc => {
-    const v = parseFloat(document.querySelector(`.income-row[data-iid="${inc.id}"] .income-input`)?.value) || 0;
-    csv += `${inc.label};${v.toFixed(2).replace('.', ',')}\n`;
-  });
-  csv += `Total Renda;${renda.toFixed(2).replace('.', ',')}\n`;
-
-  let total = 0;
-  document.querySelectorAll('.section[data-sid]').forEach(el => {
-    const sid   = el.dataset.sid;
-    const sec   = state.sections.find(s => s.id === sid);
-    const title = el.querySelector('.section-tag').textContent;
-    csv += `\n${title};color:${sec?.color || ''};bg:${sec?.bg || ''}\n`;
-    el.querySelectorAll('.item-row[data-iid]').forEach(row => {
-      const label = row.querySelector('.label-input').value || 'Item';
-      const v     = parseFloat(row.querySelector('.amount-input').value) || 0;
-      csv += `${label};${v.toFixed(2).replace('.', ',')}\n`;
-      if (v > 0) total += v;
-    });
-  });
-  csv += `\nTOTAL DESPESAS;${total.toFixed(2).replace('.', ',')}\nSALDO;${(renda - total).toFixed(2).replace('.', ',')}\n`;
-
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement('a'), {
-    href:     url,
-    download: `gastos_${MONTHS[state.currentMonth]}_${state.currentYear}.csv`,
-  });
-  a.click();
-  URL.revokeObjectURL(url);
+window.exportCSV=function(){
+  const csv=exportMonthCsv(snapshotCurrent(),MONTHS[state.currentMonth],state.currentYear);
+  const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  link.download='gastos_'+MONTHS[state.currentMonth]+'_'+state.currentYear+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
 };
 
 // ── PDF Export ──
@@ -280,20 +227,23 @@ document.addEventListener('click', function(e) {
 // ── App bootstrap ──
 // Called by auth.js after session is confirmed.
 export async function initApp(user) {
-  if (state.isInitializing) return;
+  if (state.isInitializing && state.initUser === user.id) return;
+  state.initUser=user.id;
   state.isInitializing = true;
   document.getElementById('footer-year').textContent = new Date().getFullYear();
   try {
     await populateMonths();
-    state.yearGoals = (await loadYearGoals(state.currentYear)) || {};
+    if(state.userId!==user.id)return;
     await loadMonth();
+    if(state.userId!==user.id)return;
     initFeedbackWidget();
     window._checkFabScroll?.();
-    await checkForUpdates(user);
-    await maybeShowWelcome(user);
     state.appReady = true;
+    await maybeShowWelcome(user);
+    if(state.userId!==user.id)return;
+    await checkForUpdates(user);
   } finally {
-    state.isInitializing = false;
+    if(state.initUser===user.id)state.isInitializing = false;
   }
 }
 
@@ -323,7 +273,7 @@ async function checkForUpdates(user) {
     container.appendChild(titleEl);
     container.appendChild(buildUpdateBody(data.body || ''));
 
-    document.getElementById('updateModal').classList.add('open');
+    openModal('updateModal');
     document.getElementById('updateModalBtn').addEventListener('click', async () => {
       closeModal('updateModal');
       localStorage.setItem(`cgastos_last_update_seen_${state.userId}`, data.id);
@@ -384,8 +334,15 @@ async function maybeShowWelcome(user) {
 
   openModal('welcomeModal');
 
-  document.getElementById('welcomeModalBtn').addEventListener('click', async () => {
-    closeModal('welcomeModal');
-    localStorage.setItem(welcomeKey, 'true');
-  }, { once: true });
+  return new Promise(resolve => {
+    document.getElementById('welcomeModalBtn').addEventListener('click', () => {
+      closeModal('welcomeModal');localStorage.setItem(welcomeKey,'true');resolve();
+    },{once:true});
+  });
 }
+
+// Cache only the public app shell; API responses and user data never enter this cache.
+if('serviceWorker' in navigator && location.hostname!=='127.0.0.1' && location.hostname!=='localhost')navigator.serviceWorker.register('/sw.js').catch(()=>{});
+
+document.getElementById('monthChip').addEventListener('keydown',e=>{if(e.target.id==='monthChip'&&(e.key==='Enter'||e.key===' ')){e.preventDefault();window.toggleMonthDropdown();}});
+document.addEventListener('keydown',e=>{if(e.target.matches('.copy-option')&&(e.key==='Enter'||e.key===' ')){e.preventDefault();e.target.click();}});

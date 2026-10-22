@@ -1,3 +1,6 @@
+import { installments, addInstallment } from '../finance.js';
+import { persistData, snapshotCurrent } from '../persist.js';
+import { repository } from '../db.js';
 import { state } from '../state.js';
 import { MONTHS, DEFAULT_SECTIONS } from '../constants.js';
 import { fmt } from '../utils.js';
@@ -25,7 +28,7 @@ window.openParcelModal = function() {
     const sec = state.sections.find(s => s.id === sid);
     if (!sec) return;
     const opt     = document.createElement('div');
-    opt.className = 'copy-option';
+    opt.className = 'copy-option';opt.tabIndex=0;opt.setAttribute('role','button');
     opt.dataset.sid = sec.id;
 
     const check = document.createElement('div');
@@ -75,7 +78,7 @@ window.updateParcelPreview = function() {
 
   if (total > 0 && count >= 2) {
     document.getElementById('parcelPreviewText').textContent =
-      `${count}x de ${fmt(total / count)} = ${fmt(total)} no total`;
+      (() => { try { const values=installments(document.getElementById('parcelTotal').value,count,state.currentMonth,state.currentYear); const first=values[0].val,last=values.at(-1).val; return count+' parcelas · '+fmt(Number(first))+(first!==last?' a '+fmt(Number(last)):' cada')+' · total '+fmt(total); } catch(error) { return error.message; } })();
     preview.style.display = 'block';
 
     let lastMonth = state.currentMonth + (count - 1);
@@ -95,98 +98,36 @@ window.updateParcelPreview = function() {
   }
 };
 
-window.confirmParcel = async function() {
-  const confirmBtn = document.querySelector('#parcelModal .modal-btn-primary');
-  const title = document.getElementById('parcelTitle').value.trim();
-  const total = parseFloat(document.getElementById('parcelTotal').value) || 0;
-  const count = parseInt(document.getElementById('parcelCount').value)   || 0;
 
-  const flashError = id => {
-    const f = document.getElementById(id);
-    f.style.borderColor = 'var(--danger)'; f.focus();
-    setTimeout(() => f.style.borderColor = 'var(--border)', 1400);
-  };
-  if (!title)                   { flashError('parcelTitle');  return; }
-  if (total <= 0)               { flashError('parcelTotal');  return; }
-  if (count < 2)                { flashError('parcelCount');  return; }
-  if (!selectedParcelSectionId) { window.showToast('Selecione uma categoria', 'error'); return; }
-
-  confirmBtn.disabled = true;
-  const originalBtnText = confirmBtn.textContent;
-  confirmBtn.textContent = 'Adicionando...';
-
-  const parcelVal = parseFloat((total / count).toFixed(2));
-  const parcels   = [];
-
-  try {
-    for (let i = 0; i < count; i++) {
-      let m = state.currentMonth + i, y = state.currentYear;
-      while (m > 11) { m -= 12; y++; }
-      parcels.push({ month: m, year: y, val: parcelVal, num: i + 1, total: count });
+window.confirmParcel=async function(){
+  if(state.busy)return;
+  const button=document.querySelector('#parcelModal .modal-btn-primary');
+  const title=document.getElementById('parcelTitle').value.trim();
+  const count=Number(document.getElementById('parcelCount').value);
+  const total=document.getElementById('parcelTotal').value;
+  const section=state.sections.find(s=>s.id===selectedParcelSectionId);
+  let parcels;
+  try{if(!title||!section)throw Error('Informe a descrição e selecione uma categoria.');parcels=installments(total,count,state.currentMonth,state.currentYear);}
+  catch(error){window.showToast(error.message,'error');return;}
+  state.busy=true;button.disabled=true;button.textContent='Salvando parcelas…';
+  const main=document.querySelector('.main');main.inert=true;
+  let staged=false;
+  try{
+    await persistData();
+    const purchaseId=crypto.randomUUID(),entries=[];
+    for(const parcel of parcels){
+      const original=parcel.month===state.currentMonth&&parcel.year===state.currentYear?snapshotCurrent():await loadMonthData(parcel.month,parcel.year);
+      const data=original??{incomes:[{id:'main',label:'Renda principal',val:''}],sections:structuredClone(DEFAULT_SECTIONS)};
+      entries.push({month:parcel.month,year:parcel.year,payload:addInstallment(data,section,parcel,title,purchaseId)});
     }
-
-    // Persist future months before changing current UI, avoiding a visibly partial operation.
-    const future    = parcels.filter(p => !(p.month === state.currentMonth && p.year === state.currentYear));
-    const monthsMap = {};
-
-    await Promise.all(future.map(async p => {
-      const key = `${p.year}_${p.month}`;
-      if (!monthsMap[key]) {
-        const existing = await loadMonthData(p.month, p.year);
-        monthsMap[key] = existing || {
-          incomes:  [{ id: 'main', label: 'Renda principal', val: '' }],
-          sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS)),
-        };
-      }
-      const data = monthsMap[key];
-      const sec  = data.sections.find(s => s.id === selectedParcelSectionId);
-      if (sec) {
-        sec.items.push({
-          id:     crypto.randomUUID(),
-          label:  `${title} (${p.num}/${p.total})`,
-          val:    String(p.val),
-          parcel: true,
-        });
-      }
-    }));
-
-    await Promise.all(
-      Object.entries(monthsMap).map(([key, data]) => {
-        const [y, m] = key.split('_').map(Number);
-        return saveMonthData(m, y, data);
-      })
-    );
-
-    parcels
-      .filter(p => p.month === state.currentMonth && p.year === state.currentYear)
-      .forEach(p => {
-        const sec = state.sections.find(s => s.id === selectedParcelSectionId);
-        if (!sec) return;
-        const id    = crypto.randomUUID();
-        const label = `${title} (${p.num}/${p.total})`;
-        sec.items.push({ id, label, val: String(p.val), parcel: true });
-        const sectionEl = document.querySelector(`.section[data-sid="${selectedParcelSectionId}"]`);
-        if (sectionEl) sectionEl.querySelector('.items-container').appendChild(
-          buildItemRow({ id, label, val: String(p.val), parcel: true }, selectedParcelSectionId)
-        );
-      });
-
-    recalc();
-    window.closeParcelModal();
-    const secName = state.sections.find(s => s.id === selectedParcelSectionId)?.title || '';
-    window.showToast(`${count} parcelas de ${title} adicionadas em ${secName}`);
-
-    // Rebuild month selector to include any new years created by parcels
-    // Import lazily to avoid circular dependency with app.js
-    const { populateMonths } = await import('../app.js');
-    await populateMonths();
-  } catch (err) {
-    console.error('confirmParcel:', err);
-    window.showToast('Não foi possível salvar todas as parcelas. Verifique a conexão e tente novamente.', 'error');
-  } finally {
-    confirmBtn.disabled = false;
-    confirmBtn.textContent = originalBtnText;
-  }
+    repository.stage(entries.map(e=>({...e,type:'month'})),{label:'Compra parcelada: '+title});
+    staged=true;await repository.flush();
+    window.closeParcelModal();await window.reloadCurrentMonth();window.showToast(count+' parcelas adicionadas. A soma é igual ao valor da compra.');
+    const {populateMonths}=await import('../app.js');await populateMonths();
+  }catch(error){
+    if(staged){window.closeParcelModal();await window.reloadCurrentMonth();window.showToast('Parcelas guardadas neste dispositivo. Confira o indicador de salvamento.','info');}
+    else window.showToast('Não foi possível preparar as parcelas. Nenhuma parcela nova foi gravada.','error');
+  }finally{state.busy=false;button.disabled=false;button.textContent='Adicionar parcelas';main.inert=!state.monthReady;}
 };
 
 document.getElementById('parcelModal').addEventListener('click', function(e) {

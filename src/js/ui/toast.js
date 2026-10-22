@@ -1,3 +1,4 @@
+import { state } from '../state.js';
 // ── Toast notifications ──
 
 const TOAST_ICONS        = { success: '✓', error: '✕', info: 'ℹ' };
@@ -17,7 +18,9 @@ window.showToast = function showToast(msg, type = 'success') {
   t.style.setProperty('--drain-color', drainColor);
   t.style.setProperty('--drain-dur', TOAST_DURATION + 'ms');
   t.style.position = 'fixed';
-  t.innerHTML = `<div class="toast-icon">${icon}</div><div class="toast-text">${msg}</div>`;
+  t.innerHTML = `<div class="toast-icon">${icon}</div><div class="toast-text"></div>`;
+
+  t.querySelector('.toast-text').textContent = msg;
 
   // Force reflow so the transition plays from the start
   void t.offsetWidth;
@@ -38,10 +41,9 @@ window.showToast = function showToast(msg, type = 'success') {
  *  A "Cancelar" button is always prepended automatically.
  */
 export function showConfirmToast(msgBuilder, buttons) {
+  const origin={user:state.userId,month:state.currentMonth,year:state.currentYear};
   const t = document.getElementById('toast');
-  clearTimeout(t._timer);
-  clearTimeout(t._drainTimer);
-  t.className = 'toast confirm';
+  clearTimeout(t._timer);clearTimeout(t._drainTimer);t.className='toast confirm';
 
   const msgDiv = document.createElement('div');
   msgDiv.className = 'toast-confirm-msg';
@@ -62,7 +64,7 @@ export function showConfirmToast(msgBuilder, buttons) {
     btn.className = 'toast-confirm-ok';
     if (style) Object.assign(btn.style, style);
     btn.textContent = label;
-    btn.addEventListener('click', () => { dismiss(); onClick(); });
+    btn.addEventListener('click', async () => { if(state.busy)return; dismiss(); if(origin.user!==state.userId||origin.month!==state.currentMonth||origin.year!==state.currentYear){window.showToast('O período mudou. Abra a ação novamente.','info');return;} state.busy=true;const main=document.querySelector('.main');main.inert=true;try { await onClick(); } catch { window.showToast('A alteração não foi concluída. Confira o salvamento e tente novamente.', 'error'); }finally{state.busy=false;main.inert=!state.monthReady;} });
     actionsDiv.appendChild(btn);
   });
 

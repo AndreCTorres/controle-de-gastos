@@ -50,3 +50,7 @@ build/
 # ── Arquivos locais que não devem ir ao repositório ──
 *.xlsx
 *.csv.local
+
+.private-backup/
+.netlify/
+.review/

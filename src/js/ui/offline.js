@@ -1,68 +1,73 @@
-import { persistData } from '../persist.js';
-
-// ── Offline banner ──
-// Shown when data was loaded from local cache due to no connection.
-// Disappears automatically when connectivity is restored.
-
-let _pendingSave = false;
-
-export function setPendingSave(value) {
-  _pendingSave = value;
+import { showConfirmToast } from './toast.js';
+import { repository } from '../db.js';
+import { state } from '../state.js';
+import { openModal,closeModal } from './modal.js';
+import { monthTotals } from '../finance.js';
+import { fmt } from '../utils.js';
+let lastError=null,readOffline=false;
+export const setPendingSave=()=>updateSync();
+export function showOfflineBanner(){updateSync({offline:true});}
+export function hideOfflineBanner(){updateSync();}
+function updateSync(detail={}){
+  detail=detail??{};
+  if(detail.offline!==undefined)readOffline=detail.offline;
+  if(detail.error)lastError=detail.error;
+  const el=document.getElementById('syncStatus');if(!el)return;
+  if(!state.userId){el.hidden=true;return;}
+  el.hidden=false;
+  const groups=repository.groups(),conflict=groups.some(g=>g.status==='conflict');
+  if(state.localSaveError){el.dataset.status='conflict';el.textContent='⚠ Alterações ainda não guardadas';return;}
+  el.dataset.status=conflict?'conflict':groups.length?'pending':(!navigator.onLine||readOffline)?'offline':'saved';
+  el.textContent=conflict?'⚠ Revisar divergência':groups.length?'◷ '+groups.length+' alteração(ões) no dispositivo':(!navigator.onLine||readOffline)?'Sem acesso à nuvem · cópia local':'✓ Tudo salvo';
+  if(!groups.length)lastError=null;
 }
-
-export function showOfflineBanner() {
-  let banner = document.getElementById('offlineBanner');
-  if (banner) return; // already visible
-
-  banner = document.createElement('div');
-  banner.id = 'offlineBanner';
-  banner.setAttribute('role', 'alert');
-  banner.innerHTML = `
-    <span>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px;margin-right:5px"><path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
-      Você está offline. Exibindo dados salvos localmente. As alterações serão sincronizadas quando a conexão for restaurada.
-    </span>`;
-  banner.style.cssText = `
-    position:fixed;top:0;left:0;right:0;z-index:999;
-    background:#7A6010;color:#fff;
-    font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;
-    padding:8px 20px;text-align:center;
-    box-shadow:0 2px 8px rgba(0,0,0,0.2);
-    animation:slideDown 0.3s ease;
-  `;
-
-  if (!document.querySelector('#offlineBannerStyle')) {
-    const style = document.createElement('style');
-    style.id = 'offlineBannerStyle';
-    style.textContent = `@keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}`;
-    document.head.appendChild(style);
+window.addEventListener('finance:sync',e=>updateSync(e.detail));
+window.addEventListener('online',async()=>{if(!state.userId)return;try{await repository.flush();}catch{}updateSync();});
+window.addEventListener('offline',()=>updateSync());
+window.addEventListener('storage',()=>updateSync());
+window.openSyncDetails=async function(){
+  const body=document.getElementById('syncDetails');body.replaceChildren();
+  const p=document.createElement('p');p.textContent='As alterações ficam guardadas neste navegador até serem sincronizadas. Divergências entre dispositivos exigem sua revisão.';body.append(p);
+  if(lastError){const error=document.createElement('p');error.className='sync-warning';error.textContent=lastError.code==='LOCAL_STORAGE'?lastError.message:'A última sincronização não foi concluída. Sua cópia local continua disponível.';body.append(error);}
+  for(const group of repository.groups()){
+    const card=document.createElement('div');card.className='sync-group';
+    const title=document.createElement('strong');title.textContent=group.label;card.append(title);
+    for(const e of group.entries){
+      const line=document.createElement('p');line.textContent=(e.type==='month'?(e.month+1)+'/'+e.year:'Metas de '+e.year);
+      if(e.type==='month'){const t=monthTotals(e.payload);line.textContent+=' · cópia local: renda '+fmt(t.income)+', despesas '+fmt(t.expenses);}
+      card.append(line);
+      if(group.status==='conflict'){
+        const table=e.type==='month'?'months':'monthly_goals';
+        let q=repository.client.from(table).select(e.type==='month'?'data':'goals').eq('user_id',state.userId).eq('year',e.year);
+        if(e.type==='month')q=q.eq('month',e.month);
+        const {data,error}=await q.maybeSingle();
+        const remote=document.createElement('p');
+        if(error)remote.textContent='Não foi possível consultar a versão da nuvem.';
+        else if(e.type==='month'&&data?.data){const t=monthTotals(data.data);remote.textContent='Nuvem: renda '+fmt(t.income)+', despesas '+fmt(t.expenses);}
+        else remote.textContent='Nuvem: '+(data?'há metas salvas para este ano.':'ainda não há registro.');
+        card.append(remote);
+      }
+    }
+    if(group.status==='conflict')for(const [choice,label]of [['remote','Usar versão da nuvem'],['local','Reaplicar minha versão']]){
+      const button=document.createElement('button');button.className='modal-btn-primary';button.textContent=label;
+      button.onclick=()=>showConfirmToast(msg=>{msg.textContent=choice==='local'?'Sua cópia local substituirá os períodos acima na nuvem. Uma cópia de recuperação será mantida neste navegador. Confirmar?':'As alterações locais destes períodos serão arquivadas para recuperação. Carregar os dados da nuvem?';},[{label:'Confirmar',onClick:async()=>{
+        try{await repository.resolve(group.id,choice);closeModal('syncModal');await window.reloadCurrentMonth?.();window.showToast('Divergência resolvida.');}catch(error){window.showToast('Não foi possível resolver agora. Tente novamente.','error');}
+      }}]);
+      card.append(button);
+    }
+    body.append(card);
   }
-
-  document.body.prepend(banner);
-  _pendingSave = true;
-}
-
-export function hideOfflineBanner() {
-  const banner = document.getElementById('offlineBanner');
-  if (banner) {
-    banner.style.animation = 'slideDown 0.3s ease reverse';
-    setTimeout(() => banner.remove(), 300);
-  }
-}
-
-// Monitor reconnection to sync pending data
-window.addEventListener('online', async () => {
-  if (!_pendingSave) return;
-  try {
-    await persistData();
-    _pendingSave = false;
-    hideOfflineBanner();
-    window.showToast('Conexão restaurada. Dados sincronizados.', 'success');
-  } catch (_) {
-    // Still no stable connection — keep the banner
-  }
-});
-
-window.addEventListener('offline', () => {
-  showOfflineBanner();
-});
+  openModal('syncModal');
+};
+window.retrySync=async()=>{try{await repository.flush();await window.openSyncDetails();}catch{await window.openSyncDetails();}};
+window.downloadFullBackup=async()=>{
+  const btn=document.getElementById('backupDownloadBtn');btn.disabled=true;
+  try{
+    const {data:months,error}=await repository.client.from('months').select('month,year,data,updated_at').eq('user_id',state.userId).order('year').order('month');if(error)throw error;
+    const {data:goals,error:goalError}=await repository.client.from('monthly_goals').select('year,goals,updated_at').eq('user_id',state.userId);if(goalError)throw goalError;
+    const backup={format:'controle-de-gastos',version:2,exportedAt:new Date().toISOString(),months,goals,pending:repository.groups(),recovery:repository.read('cgastos_v2_recovery_'+state.userId,[])};
+    const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));link.download='controle-gastos-backup-'+new Date().toISOString().slice(0,10)+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+  }catch{window.showToast('Não foi possível baixar o backup completo. Verifique a conexão.','error');}
+  finally{btn.disabled=false;}
+};
+setInterval(()=>{if(state.userId&&navigator.onLine&&repository.groups().some(g=>g.status!=='conflict'))repository.flush().catch(()=>{});},30000);

@@ -1153,3 +1153,30 @@ body.check-mode-active .item-label input,body.check-mode-active .item-amount inp
   .feedback-fab-menu{width:calc(100vw - 48px)}
 }
 @media print{.feedback-fab{display:none!important}}
+
+.modal-overlay:not(.open){visibility:hidden}.modal-overlay.open{visibility:visible}.save-toolbar{max-width:1100px;margin:12px auto 0;padding:0 20px;display:flex;justify-content:flex-end}#syncStatus{font:500 12px "DM Sans",sans-serif;color:var(--green);background:transparent;border:1px solid var(--border);border-radius:20px;padding:7px 12px;cursor:pointer}#syncStatus[data-status="pending"],#syncStatus[data-status="offline"]{color:#805c12}#syncStatus[data-status="conflict"]{color:var(--danger)}.sync-group{border:1px solid var(--border);border-radius:10px;padding:12px;margin:12px 0}.sync-group p{font-size:13px;margin:6px 0}.sync-group button{margin:8px 6px 0 0}.sync-warning{color:var(--danger)}@media print{.save-toolbar{display:none}}
+
+/* Category totals and limits remain readable in narrow cards. */
+.section-head{grid-template-columns:minmax(0,1fr) auto}
+.section-head-title-row{grid-column:1;grid-row:1}
+.section-head-bottom{grid-column:2;grid-row:1}
+.section-goal-indicator{grid-column:1/-1;grid-row:2;flex-direction:row;justify-content:flex-start;gap:8px;min-width:0}
+.section-goal-indicator:empty{display:none}
+.goal-badge,.goal-limit-label{max-width:100%;overflow:visible}
+@media(max-width:767px){
+ .item-row{display:grid;grid-template-columns:18px minmax(0,1fr) auto;grid-template-rows:36px 36px;height:auto;min-height:88px;padding:8px 12px;column-gap:4px}
+ .item-drag-handle{grid-column:1;grid-row:1}
+ .item-label{grid-column:2/-1;grid-row:1;height:36px}
+ .item-label input{font-size:16px}
+ .item-amount{grid-column:1/3;grid-row:2;margin-left:22px;height:36px;justify-self:start}
+ .item-amount input{width:110px;text-align:left;font-size:16px}
+ .item-actions{grid-column:3;grid-row:2;margin-left:0;gap:4px;height:36px}
+ .item-actions>button{width:36px;height:36px;color:#8b8178}
+ .section-del-btn{color:#8b8178}
+ body.check-mode-active .item-drag-handle{display:none}
+ body.check-mode-active .item-check-toggle{grid-column:1;grid-row:1;width:24px;height:24px}
+ body.check-mode-active .item-label{padding-left:8px}
+ .modal-footer{flex-wrap:wrap;gap:8px}
+ .modal-footer>button{min-height:40px}
+ .save-toolbar{padding:0 12px}
+}

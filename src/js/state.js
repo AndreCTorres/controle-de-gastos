@@ -7,6 +7,8 @@ const NOW = new Date();
 export const state = {
   currentMonth: NOW.getMonth(),
   currentYear:  NOW.getFullYear(),
+  loading: false,
+  monthReady: false,
   sections:     [],
   incomes:      [],
   nextId:       9000,

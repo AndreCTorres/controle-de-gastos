@@ -1,3 +1,4 @@
+import { persistData } from './persist.js';
 import { supabase } from './config.js';
 import { initApp } from './app.js';
 import { state } from './state.js';
@@ -5,6 +6,7 @@ import { state } from './state.js';
 // ── Auth state listener ──
 supabase.auth.onAuthStateChange((event, session) => {
   const user = session?.user ?? null;
+  if(event==='PASSWORD_RECOVERY'){showAuth();document.querySelectorAll('.auth-form').forEach(f=>f.style.display='none');document.getElementById('recoveryForm').style.display='flex';return;}
   if (user) {
     const previousUserId = state.userId;
     // Cache userId on login so db.js never needs to call getUser() again
@@ -27,7 +29,9 @@ supabase.auth.onAuthStateChange((event, session) => {
     state.userId = null;
     state.userEmail = '';
     state.userMeta = {};
+    clearTimeout(state.saveTimer);state.saveTimer=null;state.monthReady=false;state.isInitializing=false;state.sections=[];state.incomes=[];
     state.appReady = false;
+    document.querySelectorAll('.modal-overlay.open').forEach(el=>el.classList.remove('open'));
     showAuth();
   }
 });
@@ -39,7 +43,7 @@ function showApp(user) {
   document.body.style.overflow = '';
 
   updateUserHeader(user);
-  initApp(user);
+  initApp(user).catch(()=>{window.showToast('Não foi possível iniciar. Recarregue a página para tentar novamente.','error');});
 }
 
 function updateUserHeader(user) {
@@ -143,6 +147,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     // Login bem-sucedido — zera contador
     loginAttempts    = 0;
     loginLockedUntil = 0;
+    btn.disabled=false;btn.textContent='Entrar';document.getElementById('loginPassword').value='';
   }
 });
 
@@ -171,7 +176,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { name } },
+    options: { data: { name }, emailRedirectTo: window.location.origin + window.location.pathname },
   });
 
   if (error) {
@@ -215,12 +220,15 @@ document.getElementById('forgotForm').addEventListener('submit', async (e) => {
 
 // ── Logout ──
 window.handleLogout = async function () {
+  if(state.busy||state.loading){window.showToast('Aguarde a operação terminar antes de sair.','info');return;}
   try {
-    await supabase.auth.signOut();
+    try { await persistData(); } catch(error) { if(error.code==='LOCAL_STORAGE'){window.showToast('Exporte seus dados antes de sair: o navegador não conseguiu guardar as alterações.','error');return;} }
+    const { error } = await supabase.auth.signOut({scope:'local'});
+    if(error)throw error;
   } catch (err) {
     // Se o signOut falhar (ex: sem rede), força a limpeza local
     // O onAuthStateChange não vai disparar, então limpamos a UI diretamente
-    showAuth();
+    window.showToast('Não foi possível sair agora. Tente novamente com conexão.','error');
   }
 };
 
@@ -238,3 +246,11 @@ function translateAuthError(msg) {
   if (msg.includes('email_exists'))               return 'Este e-mail já está cadastrado.';
   return 'Ocorreu um erro. Tente novamente.'; // não expõe mensagem técnica ao usuário
 }
+
+// Password recovery is completed only by the user in this form.
+document.getElementById('recoveryForm').addEventListener('submit',async e=>{
+ e.preventDefault();const button=document.getElementById('recoveryBtn'),error=document.getElementById('recoveryError');error.textContent='';
+ const password=document.getElementById('recoveryPassword').value,confirmation=document.getElementById('recoveryConfirm').value;
+ if(password!==confirmation){error.textContent='As senhas não coincidem.';return;}
+ button.disabled=true;try{const result=await supabase.auth.updateUser({password});if(result.error)throw result.error;document.getElementById('recoveryPassword').value='';document.getElementById('recoveryConfirm').value='';await supabase.auth.signOut({scope:'local'});window.location.replace(window.location.pathname);}catch{error.textContent='Não foi possível atualizar. Abra um novo link de recuperação e tente novamente.';}finally{button.disabled=false;}
+});

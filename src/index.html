@@ -32,11 +32,11 @@
     <!-- login form -->
     <form id="loginForm" class="auth-form">
       <div class="auth-field">
-        <label>E-mail</label>
+        <label for="loginEmail">E-mail</label>
         <input type="email" id="loginEmail" placeholder="seu@email.com" required autocomplete="email">
       </div>
       <div class="auth-field">
-        <label>Senha</label>
+        <label for="loginPassword">Senha</label>
         <input type="password" id="loginPassword" placeholder="••••••••" required autocomplete="current-password">
       </div>
       <div id="loginError" class="auth-error" style="display:none"></div>
@@ -50,7 +50,7 @@
         Digite seu e-mail e enviaremos um link para redefinir sua senha.
       </p>
       <div class="auth-field">
-        <label>E-mail</label>
+        <label for="forgotEmail">E-mail</label>
         <input type="email" id="forgotEmail" placeholder="seu@email.com" required autocomplete="email">
       </div>
       <div id="forgotError" class="auth-error" style="display:none"></div>
@@ -58,18 +58,19 @@
       <button type="button" class="auth-forgot-btn" id="backToLoginBtn">← Voltar ao login</button>
     </form>
 
+    <form id="recoveryForm" class="auth-form" style="display:none"><h2>Redefinir senha</h2><div class="auth-field"><label for="recoveryPassword">Nova senha</label><input id="recoveryPassword" type="password" minlength="6" required autocomplete="new-password"></div><div class="auth-field"><label for="recoveryConfirm">Confirmar nova senha</label><input id="recoveryConfirm" type="password" minlength="6" required autocomplete="new-password"></div><div id="recoveryError" role="alert"></div><button class="auth-btn" id="recoveryBtn" type="submit">Salvar nova senha</button></form>
     <!-- signup form -->
     <form id="signupForm" class="auth-form" style="display:none">
       <div class="auth-field">
-        <label>Seu nome</label>
+        <label for="signupName">Seu nome</label>
         <input type="text" id="signupName" placeholder="Como quer ser chamado?" required autocomplete="name">
       </div>
       <div class="auth-field">
-        <label>E-mail</label>
+        <label for="signupEmail">E-mail</label>
         <input type="email" id="signupEmail" placeholder="seu@email.com" required autocomplete="email">
       </div>
       <div class="auth-field">
-        <label>Senha</label>
+        <label for="signupPassword">Senha</label>
         <input type="password" id="signupPassword" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password">
       </div>
       <div id="signupError" class="auth-error" style="display:none"></div>
@@ -97,11 +98,11 @@
     <div class="header-sub">Finanças pessoais</div>
   </div>
   <div class="header-right">
-    <div class="month-chip" id="monthChip" onclick="toggleMonthDropdown()">
+    <div class="month-chip" id="monthChip" role="button" tabindex="0" aria-expanded="false" aria-label="Escolher mês" onclick="toggleMonthDropdown()">
       <span class="month-chip-label">Mês</span>
       <span class="month-chip-value" id="monthChipValue">—</span>
       <span class="month-chip-arrow">▾</span>
-      <div class="month-dropdown" id="monthDropdown"></div>
+      <div class="month-dropdown" id="monthDropdown" role="listbox" aria-label="Meses"></div>
     </div>
     <div class="header-sep"></div>
     <button class="header-logout-btn" id="logoutBtn" onclick="handleLogout()" title="Sair">
@@ -111,6 +112,7 @@
   </div>
 </div>
 
+<div class="save-toolbar"><button id="syncStatus" type="button" onclick="openSyncDetails()" hidden>Verificando salvamento…</button></div>
 <div class="main">
 
   <div class="income-banner">
@@ -584,11 +586,20 @@
   </div>
 </div>
 
+
+<div class="modal-overlay" id="syncModal" role="dialog" aria-modal="true" aria-labelledby="syncModalTitle">
+ <div class="modal" style="max-width:600px">
+  <div class="modal-header"><div class="modal-title" id="syncModalTitle">Salvamento e backup</div><button class="modal-close" aria-label="Fechar" onclick="document.getElementById('syncModal').classList.remove('open')">×</button></div>
+  <div class="modal-body" id="syncDetails"></div>
+  <div class="modal-footer"><button class="modal-btn-cancel" id="backupDownloadBtn" onclick="downloadFullBackup()">Baixar backup completo</button><button class="modal-btn-primary" onclick="retrySync()">Sincronizar agora</button></div>
+ </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="vendor/supabase-2.118.0.js"></script>
 <!-- App — auth.js é o ponto de entrada; importa app.js que importa todos os módulos -->
 <script type="module" src="js/auth.js"></script>
 

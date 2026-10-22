@@ -1,194 +1,23 @@
 import { supabase } from './config.js';
 import { state } from './state.js';
-
-// ── Helper: get current user id (cached to avoid repeated network calls) ──
-async function uid() {
-  if (state.userId) return state.userId;
-  return null;
-}
-
-// ── Cache local (localStorage) ──
-// Chave: `cgastos_<userId>_<year>_<month>`  — isolada por usuário e período
-// Usado como fallback de leitura quando o Supabase está inacessível.
-// Os dados são sempre sobrescritos em cada save bem-sucedido.
-
-const CACHE_VERSION = 'v1';
-
-function cacheKey(userId, month, year) {
-  return `cgastos_${CACHE_VERSION}_${userId}_${year}_${month}`;
-}
-
-function cacheGoalsKey(userId, year) {
-  return `cgastos_${CACHE_VERSION}_goals_${userId}_${year}`;
-}
-
-function writeCache(key, data) {
-  try {
-    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
-  } catch (e) {
-    // localStorage cheio ou indisponível — falha silenciosa
-  }
-}
-
-function readCache(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw)?.data ?? null;
-  } catch (e) {
-    return null;
-  }
-}
-
-// ────────────────────────────────────────────────
-// LOAD month data for a given (month, year)
-// Returns { incomes, sections } or null if not found
-// Falls back to localStorage cache when offline.
-// ────────────────────────────────────────────────
-export async function loadMonthData(month, year) {
-  const userId = await uid();
-  if (!userId) return null;
-
-  try {
-    const { data, error } = await supabase
-      .from('months')
-      .select('data')
-      .eq('user_id', userId)
-      .eq('month', month)
-      .eq('year', year)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    const result = data?.data ?? null;
-
-    // Atualiza o cache local sempre que a leitura do servidor for bem-sucedida
-    if (result !== null) {
-      writeCache(cacheKey(userId, month, year), result);
-    }
-
-    return result;
-  } catch (err) {
-    console.warn('loadMonthData: offline ou erro de rede — usando cache local', err);
-
-    const cached = readCache(cacheKey(userId, month, year));
-    if (cached) {
-      // Retorna os dados cacheados e sinaliza que veio do cache
-      const error = Object.assign(new Error('offline'), { fromCache: true, cachedData: cached });
-      throw error;
-    }
-
-    // Sem cache disponível — propaga o erro original
-    throw err;
-  }
-}
-
-// ────────────────────────────────────────────────
-// SAVE month data (upsert)
-// payload: { incomes: [...], sections: [...] }
-// Writes to localStorage cache before hitting the server (write-through).
-// ────────────────────────────────────────────────
-export async function saveMonthData(month, year, payload) {
-  const userId = await uid();
-  if (!userId) return;
-
-  // Escrita antecipada no cache — garante que dados recentes sobrevivam a quedas de rede
-  writeCache(cacheKey(userId, month, year), payload);
-
-  const { error } = await supabase
-    .from('months')
-    .upsert(
-      { user_id: userId, month, year, data: payload, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id,month,year' }
-    );
-
-  if (error) {
-    console.error('saveMonthData:', error);
-    throw error;
-  }
-}
-
-// ────────────────────────────────────────────────
-// LOAD all months that have data (for dropdown)
-// Returns array of { month, year }
-// ────────────────────────────────────────────────
-export async function loadMonthsWithData() {
-  const userId = await uid();
-  if (!userId) return [];
-
-  const { data, error } = await supabase
-    .from('months')
-    .select('month, year')
-    .eq('user_id', userId)
-    .order('year', { ascending: true })
-    .order('month', { ascending: true });
-
-  if (error) { console.error('loadMonthsWithData:', error); return []; }
-  return data ?? [];
-}
-
-// ────────────────────────────────────────────────
-// METAS — carrega metas do ano para o usuário
-// Tabela: monthly_goals (user_id, year, goals jsonb)
-// goals = { [monthIndex]: { [sectionId]: limitValue } }
-// ────────────────────────────────────────────────
-export async function loadYearGoals(year) {
-  const userId = await uid();
-  if (!userId) return null;
-
-  try {
-    const { data, error } = await supabase
-      .from('monthly_goals')
-      .select('goals')
-      .eq('user_id', userId)
-      .eq('year', year)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    const result = data?.goals ?? null;
-    if (result !== null) {
-      writeCache(cacheGoalsKey(userId, year), result);
-    }
-    return result;
-  } catch (err) {
-    console.warn('loadYearGoals: offline — usando cache local', err);
-    return readCache(cacheGoalsKey(userId, year));
-  }
-}
-
-export async function saveYearGoals(year, goals) {
-  const userId = await uid();
-  if (!userId) return;
-
-  // Escrita antecipada no cache
-  writeCache(cacheGoalsKey(userId, year), goals);
-
-  const { error } = await supabase
-    .from('monthly_goals')
-    .upsert(
-      { user_id: userId, year, goals, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id,year' }
-    );
-
-  if (error) { console.error('saveYearGoals:', error); throw error; }
-}
-
-// ────────────────────────────────────────────────
-// RELATÓRIO ANUAL — carrega todos os meses de um ano
-// Returns array of { month, data: { incomes, sections } }
-// ────────────────────────────────────────────────
-export async function loadYearData(year) {
-  const userId = await uid();
-  if (!userId) return [];
-
-  const { data, error } = await supabase
-    .from('months')
-    .select('month, year, data')
-    .eq('user_id', userId)
-    .eq('year', year)
-    .order('month', { ascending: true });
-
-  if (error) { console.error('loadYearData:', error); return []; }
-  return data ?? [];
+import { FinanceRepository } from './repository.js';
+let tabId;
+try { tabId=sessionStorage.getItem('cgastos_tab_id'); if(!tabId){tabId=crypto.randomUUID();sessionStorage.setItem('cgastos_tab_id',tabId);} }catch{tabId=crypto.randomUUID();}
+export const repository=new FinanceRepository({
+  client:supabase,storage:localStorage,userId:()=>state.userId,tabId,
+  notify:detail=>window.dispatchEvent(new CustomEvent('finance:sync',{detail}))
+});
+export const loadMonthData=(month,year)=>repository.load('month',month,year);
+export const loadYearGoals=year=>repository.load('goals',null,year);
+export const saveMonthData=(month,year,payload)=>repository.save([{type:'month',month,year,payload}],{coalesce:true});
+export const saveYearGoals=(year,payload)=>repository.save([{type:'goals',year,payload}],{coalesce:true,label:'Metas do ano'});
+export const saveMonthsAtomic=(entries,label)=>repository.save(entries.map(e=>({...e,type:'month'})),{label});
+export const loadYearData=year=>repository.listYear(year);
+export async function loadMonthsWithData(){
+  if(!state.userId)return [];
+  const {data,error}=await supabase.from('months').select('month, year').eq('user_id',state.userId).order('year').order('month');
+  if(error)throw error;
+  const entries=[...(data??[])];
+  for(const g of repository.groups())for(const e of g.entries)if(e.type==='month'&&!entries.some(r=>r.month===e.month&&r.year===e.year))entries.push({month:e.month,year:e.year});
+  return entries;
 }

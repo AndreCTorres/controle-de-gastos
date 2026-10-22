@@ -1,66 +1,39 @@
-import { saveMonthData } from './db.js';
+import { repository } from './db.js';
 import { state } from './state.js';
-
-// ── Debounced save ──
-// Waits 800ms after the last change before hitting Supabase
-
-export function scheduleSave() {
-  clearTimeout(state.saveTimer);
-  state.saveTimer = setTimeout(persistData, 800);
+import { captureMonth } from './finance.js';
+let lastQueued=null;
+export function resetSaveSnapshot(){const payload=captureMonth(state,document);state.incomes=payload.incomes;state.sections=payload.sections;lastQueued=state.userId+'_'+state.currentYear+'_'+state.currentMonth+'_'+JSON.stringify(payload);}
+export function snapshotCurrent(){
+  const payload=captureMonth(state,document);
+  state.incomes=payload.incomes;state.sections=payload.sections;
+  return payload;
 }
-
-export async function persistData() {
-  const incomeData = state.incomes.map(inc => {
-    // Prefer state values; fall back to DOM if the row exists (keeps edited-but-not-yet-flushed values)
-    const row = document.querySelector(`.income-row[data-iid="${inc.id}"]`);
-    return {
-      id:    inc.id,
-      label: row ? row.querySelector('.income-label input').value : inc.label,
-      val:   row ? row.querySelector('.income-input').value       : inc.val,
-    };
-  });
-
-  const secs = state.sections.map(sec => {
-    const items = sec.items.map(item => {
-      const row = document.querySelector(`.item-row[data-iid="${item.id}"]`);
-      const entry = {
-        id:    item.id,
-        label: row ? row.querySelector('.label-input').value  : item.label,
-        val:   row ? row.querySelector('.amount-input').value : item.val,
-      };
-      if (item.parcel) entry.parcel = true;
-      if (item.checked) entry.checked = true;
-      return entry;
-    });
-    return { id: sec.id, title: sec.title, color: sec.color, bg: sec.bg, items };
-  });
-
+export function scheduleSave(){
+  if(!state.userId||state.loading||!state.monthReady)return;
+  const payload=snapshotCurrent();
+  const identity=state.userId+'_'+state.currentYear+'_'+state.currentMonth+'_'+JSON.stringify(payload);
+  if(identity===lastQueued)return;
   try {
-    await saveMonthData(state.currentMonth, state.currentYear, { incomes: incomeData, sections: secs });
-  } catch (err) {
-    const isOffline = !navigator.onLine || err?.message?.toLowerCase().includes('fetch');
-    if (isOffline) {
-      // Signal offline — import lazily to avoid circular dependency
-      const { setPendingSave } = await import('./ui/offline.js');
-      setPendingSave(true);
-      window.showToast('Sem conexão. Dados salvos localmente e serão sincronizados em breve.', 'error');
-    } else {
-      // Non-network error (e.g. RLS policy denied, payload too large) — alert the user
-      console.error('persistData:', err);
-      window.showToast('Erro ao salvar. Seus dados podem não ter sido gravados.', 'error');
-    }
-  }
-}
-
-// ── beforeunload: force immediate save if a pending change exists ──
-window.addEventListener('beforeunload', () => {
-  if (state.saveTimer) {
+    repository.stage([{type:'month',month:state.currentMonth,year:state.currentYear,payload}],{coalesce:true});
+    state.localSaveError=null;lastQueued=identity;
     clearTimeout(state.saveTimer);
-    persistData(); // fire-and-forget — best effort
-  }
-});
-
-// ── Save a specific future-month payload directly ──
-export async function persistFutureMonth(month, year, payload) {
-  await saveMonthData(month, year, payload);
+    state.saveTimer=setTimeout(()=>{state.saveTimer=null;persistData().catch(()=>{});},800);
+    return true;
+  }catch(error){state.localSaveError=error;window.dispatchEvent(new CustomEvent('finance:sync',{detail:{error}}));window.showToast(error.message,'error');return false;}
 }
+export async function persistData(){
+  clearTimeout(state.saveTimer);state.saveTimer=null;
+  if(scheduleSave()===false)throw state.localSaveError;clearTimeout(state.saveTimer);state.saveTimer=null;
+  try {await repository.flush();return true;}
+  catch(error){
+    const conflict=['CONFLICT','40001','23505'].includes(error.code);
+    window.dispatchEvent(new CustomEvent('finance:sync',{detail:{error,conflict}}));
+    throw error;
+  }
+}
+export async function persistFutureMonth(month,year,payload){await repository.save([{type:'month',month,year,payload}]);}
+// The durable outbox is written synchronously on every edit, before any network debounce.
+window.addEventListener('pagehide',()=>{clearTimeout(state.saveTimer);state.saveTimer=null;});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&state.userId)persistData().catch(()=>{});});
+
+window.addEventListener('beforeunload',event=>{if(state.localSaveError){event.preventDefault();event.returnValue='';}});

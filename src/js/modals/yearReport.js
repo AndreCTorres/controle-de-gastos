@@ -1,3 +1,5 @@
+import { monthTotals as calculateMonth, cents, csvField } from '../finance.js';
+import { persistData } from '../persist.js';
 import { state } from '../state.js';
 import { MONTHS } from '../constants.js';
 import { fmt } from '../utils.js';
@@ -18,6 +20,7 @@ window.openYearReport = async function() {
 
   let yearData = [];
   try {
+    await persistData().catch(()=>{});
     yearData = await loadYearData(state.currentYear);
   } catch (err) {
     body.innerHTML = `<p style="color:var(--danger);text-align:center;padding:32px">Erro ao carregar dados. Verifique sua conexão.</p>`;
@@ -37,17 +40,17 @@ window.openYearReport = async function() {
     const d = byMonth[m];
     if (!d) { monthTotals.push(null); continue; }
 
-    const renda = (d.incomes || []).reduce((a, i) => a + (parseFloat(i.val) || 0), 0);
+    const renda = calculateMonth(d).income;
     const bySec = {};
     let totalDesp = 0;
     (d.sections || []).forEach(sec => {
       allSecIds.add(sec.id);
       allSecMeta[sec.id] = { title: sec.title, color: sec.color };
-      const sub = (sec.items || []).reduce((a, i) => a + (parseFloat(i.val) || 0), 0);
+      const sub = (sec.items || []).reduce((a, i) => a + cents(i.val), 0) / 100;
       bySec[sec.id] = sub;
-      totalDesp += sub;
+      totalDesp = (Math.round(totalDesp*100)+Math.round(sub*100))/100;
     });
-    monthTotals.push({ renda, totalDesp, bySec, saldo: renda - totalDesp });
+    monthTotals.push({ renda, totalDesp, bySec, saldo: (Math.round(renda*100)-Math.round(totalDesp*100))/100 });
   }
 
   // Store snapshot for CSV export
@@ -236,7 +239,7 @@ window.exportYearReport = function() {
   const num = v => v.toFixed(2).replace('.', ',');
 
   // Helper: escape CSV field
-  const esc = v => `"${String(v).replace(/"/g, '""')}"`;
+  const esc = csvField;
 
   const rows = [];
 

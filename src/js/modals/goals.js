@@ -75,7 +75,7 @@ window.confirmGoals = async function() {
 
   try {
     await saveYearGoals(state.currentYear, state.yearGoals);
-    recalc();
+    recalc(false);
     window.closeGoalsModal();
     window.showToast('Metas salvas!');
   } catch (err) {

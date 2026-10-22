@@ -1,3 +1,6 @@
+import { copyPreviousMonth } from '../finance.js';
+import { repository } from '../db.js';
+import { snapshotCurrent } from '../persist.js';
 import { state } from '../state.js';
 import { MONTHS } from '../constants.js';
 import { fmt } from '../utils.js';
@@ -40,7 +43,7 @@ window.openCopyModal = async function() {
   modeBox.innerHTML = `
     <label class="copy-mode-option">
       <input type="radio" name="copyMode" value="withValues" checked>
-      <span><strong>Copiar itens e valores</strong><small>Bom para gastos recorrentes.</small></span>
+      <span><strong>Copiar itens e valores</strong><small>Bom para gastos recorrentes. Parcelas não são copiadas.</small></span>
     </label>
     <label class="copy-mode-option">
       <input type="radio" name="copyMode" value="structureOnly">
@@ -104,55 +107,21 @@ window.closeCopyModal = function() {
   closeModal('copyModal');
 };
 
-window.confirmCopy = async function() {
-  if (copySelections.size === 0) { window.showToast('Selecione pelo menos uma opção', 'error'); return; }
 
-  const prevData = await loadMonthData(copySourceMonth, copySourceYear);
-  if (!prevData) return;
-  const btn = document.querySelector('#copyModal .modal-btn-primary');
-  const originalText = btn?.textContent;
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = 'Copiando...';
-  }
-
-  try {
-    if (copySelections.has('rendas')) {
-      state.incomes = JSON.parse(JSON.stringify(prevData.incomes || [{ id: 'main', label: 'Renda principal', val: '' }]));
-      renderIncomes();
-    }
-
-    const structureOnly = getCopyMode() === 'structureOnly';
-    const selectedSections = (prevData.sections || [])
-      .filter(prevSec => copySelections.has('sec_' + prevSec.id))
-      .map(prevSec => {
-        const clone = JSON.parse(JSON.stringify(prevSec));
-        clone.items = (clone.items || []).map(item => ({ ...item, checked: false, ...(structureOnly ? { val: '' } : {}) }));
-        return clone;
-      });
-
-    selectedSections.forEach(prevSec => {
-      const idx = state.sections.findIndex(sec =>
-        sec.id === prevSec.id || (sec.title || '').trim().toLowerCase() === (prevSec.title || '').trim().toLowerCase()
-      );
-      if (idx >= 0) state.sections[idx] = prevSec;
-      else state.sections.push(prevSec);
-    });
-
-    renderSections();
-    recalc();
-    await persistData();
-    window.closeCopyModal();
-    window.showToast(structureOnly ? 'Estrutura copiada com valores zerados!' : 'Dados copiados com sucesso!');
-  } catch (err) {
-    console.error('confirmCopy:', err);
-    window.showToast('Não foi possível copiar os dados. Tente novamente.', 'error');
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = originalText;
-    }
-  }
+window.confirmCopy=async function(){
+ if(state.busy||copySelections.size===0){if(!state.busy)window.showToast('Selecione pelo menos uma opção','error');return;}
+ const button=document.querySelector('#copyModal .modal-btn-primary');state.busy=true;button.disabled=true;
+ const main=document.querySelector('.main');main.inert=true;
+ try{
+  await persistData();
+  const prev=await loadMonthData(copySourceMonth,copySourceYear);if(!prev)throw Error('Mês de origem indisponível.');
+  const before=snapshotCurrent(),structureOnly=getCopyMode()==='structureOnly';
+  repository.archive('Antes de copiar mês anterior',[{type:'month',month:state.currentMonth,year:state.currentYear,payload:before}]);
+  const data=copyPreviousMonth(before,prev,{incomes:copySelections.has('rendas'),sections:[...copySelections].filter(k=>k.startsWith('sec_')).map(k=>k.slice(4)),structureOnly});
+  state.incomes=data.incomes;state.sections=data.sections;renderIncomes();renderSections();recalc();
+  await persistData();window.closeCopyModal();window.showToast(structureOnly?'Estrutura copiada com valores zerados.':'Dados recorrentes copiados; parcelas atuais preservadas.');
+ }catch(error){window.showToast('A cópia não foi sincronizada. Confira o indicador de salvamento antes de tentar novamente.','error');}
+ finally{state.busy=false;button.disabled=false;main.inert=!state.monthReady;}
 };
 
 document.getElementById('copyModal').addEventListener('click', function(e) {

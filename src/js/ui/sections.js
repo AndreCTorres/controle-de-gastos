@@ -1,113 +1,60 @@
+import { repository } from '../db.js';
+import { snapshotCurrent } from '../persist.js';
+import { cents, newId } from '../finance.js';
 import { state } from '../state.js';
 import { scheduleSave } from '../persist.js';
-import { loadMonthData, saveMonthData, loadYearData } from '../db.js';
+import { loadMonthData, saveMonthData, loadYearData, loadMonthsWithData, saveMonthsAtomic } from '../db.js';
+import { persistData } from '../persist.js';
 import { recalc } from './recalc.js';
 import { showConfirmToast } from './toast.js';
 
 // ── Propagate parcel removal to future months ──
-export async function _removeParcelFromFutureMonths(baseTitle, sid, fromMonth, fromYear, totalParcels, fromNum) {
-  // Build list of (month, year, expected label) for all remaining parcels
-  const targets = [];
-  for (let n = fromNum + 1; n <= totalParcels; n++) {
-    let m = fromMonth + (n - fromNum);
-    let y = fromYear;
-    while (m > 11) { m -= 12; y++; }
-    targets.push({ m, y, label: `${baseTitle} (${n}/${totalParcels})` });
-  }
 
-  // Load all months in parallel
-  const loaded = await Promise.all(
-    targets.map(async t => ({ ...t, data: await loadMonthData(t.m, t.y) }))
-  );
-
-  // Mutate and save in parallel (only months that actually had the parcel)
-  await Promise.all(
-    loaded
-      .filter(t => t.data)
-      .map(t => {
-        const sec = t.data.sections?.find(s => s.id === sid);
-        if (sec) sec.items = sec.items.filter(i => i.label !== t.label);
-        return saveMonthData(t.m, t.y, t.data);
-      })
-  );
+export async function _removeParcelFromFutureMonths(baseTitle,sid,fromMonth,fromYear,totalParcels,fromNum,purchaseId){
+ const entries=[];
+ for(let n=fromNum+1;n<=totalParcels;n++){
+  const offset=fromMonth+n-fromNum,m=offset%12,y=fromYear+Math.floor(offset/12),data=await loadMonthData(m,y);
+  if(!data)continue;
+  let changed=false;
+  for(const sec of data.sections){const before=sec.items.length;sec.items=sec.items.filter(i=>purchaseId?i.purchaseId!==purchaseId:!(sec.id===sid&&i.label===baseTitle+' ('+n+'/'+totalParcels+')'));changed||=before!==sec.items.length;}
+  if(changed)entries.push({month:m,year:y,payload:data});
+ }
+ if(entries.length)await saveMonthsAtomic(entries,'Remover parcelas futuras');
+}
+export async function _moveParcelInFutureMonths(baseTitle,fromSid,toSection,fromMonth,fromYear,totalParcels,fromNum,purchaseId){
+ const entries=[];
+ for(let n=fromNum+1;n<=totalParcels;n++){
+  const offset=fromMonth+n-fromNum,m=offset%12,y=fromYear+Math.floor(offset/12),data=await loadMonthData(m,y);if(!data)continue;
+  const from=data.sections.find(s=>s.items.some(i=>purchaseId?i.purchaseId===purchaseId:(s.id===fromSid&&i.label===baseTitle+' ('+n+'/'+totalParcels+')')));
+  if(!from)continue;const index=from.items.findIndex(i=>purchaseId?i.purchaseId===purchaseId:i.label===baseTitle+' ('+n+'/'+totalParcels+')');const [item]=from.items.splice(index,1);
+  let target=data.sections.find(s=>s.id===toSection.id);if(!target){target={...toSection,items:[]};data.sections.push(target);}target.items.push(item);
+  entries.push({month:m,year:y,payload:data});
+ }
+ if(entries.length)await saveMonthsAtomic(entries,'Mover parcelas futuras');return entries.length;
 }
 
-export async function _moveParcelInFutureMonths(baseTitle, fromSid, toSection, fromMonth, fromYear, totalParcels, fromNum) {
-  const targets = [];
-  for (let n = fromNum + 1; n <= totalParcels; n++) {
-    let m = fromMonth + (n - fromNum);
-    let y = fromYear;
-    while (m > 11) { m -= 12; y++; }
-    targets.push({ m, y, label: `${baseTitle} (${n}/${totalParcels})` });
-  }
-
-  let count = 0;
-  for (const t of targets) {
-    const data = await loadMonthData(t.m, t.y);
-    if (!data?.sections) continue;
-
-    const fromSec = data.sections.find(s => s.id === fromSid);
-    if (!fromSec) continue;
-
-    const itemIdx = (fromSec.items || []).findIndex(i => i.label === t.label);
-    if (itemIdx === -1) continue;
-
-    const [item] = fromSec.items.splice(itemIdx, 1);
-    let destSec = data.sections.find(s =>
-      s.id === toSection.id || (s.title || '').trim().toLowerCase() === (toSection.title || '').trim().toLowerCase()
-    );
-    if (!destSec) {
-      destSec = { ...toSection, items: [] };
-      data.sections.push(destSec);
-    }
-    destSec.items = destSec.items || [];
-    destSec.items.push(item);
-    await saveMonthData(t.m, t.y, data);
-    count++;
-  }
-  return count;
+async function futureMonths(){
+  const month=state.currentMonth,year=state.currentYear;
+  const saved=await loadMonthsWithData();
+  const targets=saved.filter(e=>e.year>year||(e.year===year&&e.month>month));
+  return Promise.all(targets.map(async e=>({...e,data:await loadMonthData(e.month,e.year)})));
 }
-
-// ── Propagate item removal to future months ──
-export async function _removeItemFromFutureMonths(sid, iid, itemLabel) {
-  const futureSameYear = (await loadYearData(state.currentYear)).filter(m => m.month > state.currentMonth);
-  const nextYearMonths = await loadYearData(state.currentYear + 1);
-  const allFuture = [...futureSameYear, ...nextYearMonths];
-
-  let count = 0;
-  for (const entry of allFuture) {
-    const data = entry.data;
-    if (!data) continue;
-    const sec = data.sections?.find(s => s.id === sid);
-    if (!sec) continue;
-    const before = sec.items.length;
-    sec.items = sec.items.filter(i => i.id !== iid && i.label !== itemLabel);
-    if (sec.items.length < before) {
-      await saveMonthData(entry.month, entry.year, data);
-      count++;
-    }
+export async function _removeItemFromFutureMonths(sid,iid,itemLabel){
+  const entries=[];
+  for(const e of await futureMonths()){
+    const sec=e.data?.sections?.find(s=>s.id===sid);if(!sec)continue;
+    const before=sec.items.length;sec.items=sec.items.filter(i=>i.id!==iid&&i.label!==itemLabel);
+    if(sec.items.length<before)entries.push({month:e.month,year:e.year,payload:e.data});
   }
-  return count;
+  if(entries.length)await saveMonthsAtomic(entries,'Remover item dos meses seguintes');return entries.length;
 }
-
-// ── Propagate section removal to future months ──
-export async function _removeSectionFromFutureMonths(secId) {
-  const futureSameYear = (await loadYearData(state.currentYear)).filter(m => m.month > state.currentMonth);
-  const nextYearMonths = await loadYearData(state.currentYear + 1);
-  const allFuture = [...futureSameYear, ...nextYearMonths];
-
-  let count = 0;
-  for (const entry of allFuture) {
-    const data = entry.data;
-    if (!data) continue;
-    const before = (data.sections || []).length;
-    data.sections = (data.sections || []).filter(s => s.id !== secId);
-    if (data.sections.length < before) {
-      await saveMonthData(entry.month, entry.year, data);
-      count++;
-    }
+export async function _removeSectionFromFutureMonths(secId){
+  const entries=[];
+  for(const e of await futureMonths()){
+    if(!e.data)continue;const before=e.data.sections.length;e.data.sections=e.data.sections.filter(s=>s.id!==secId);
+    if(e.data.sections.length<before)entries.push({month:e.month,year:e.year,payload:e.data});
   }
-  return count;
+  if(entries.length)await saveMonthsAtomic(entries,'Remover categoria dos meses seguintes');return entries.length;
 }
 
 // ── Remove item (always confirms before deleting) ──
@@ -140,7 +87,7 @@ export function removeItem(sid, iid) {
         style: { fontSize: '11px' },
         onClick: async () => {
           _doRemoveItem(sid, iid);
-          await _removeParcelFromFutureMonths(baseTitle, sid, state.currentMonth, state.currentYear, totalParcels, currentNum);
+          await _removeParcelFromFutureMonths(baseTitle, sid, state.currentMonth, state.currentYear, totalParcels, currentNum, item.purchaseId);
           window.showToast(`"${baseTitle}" removida dos meses seguintes`);
         },
       });
@@ -216,18 +163,11 @@ export function removeItem(sid, iid) {
   ]);
 }
 
-function _doRemoveItem(sid, iid) {
-  const sec = state.sections.find(s => s.id === sid);
-  if (sec) sec.items = sec.items.filter(i => i.id !== iid);
-  const row = document.querySelector(`.item-row[data-iid="${iid}"]`);
-  if (row) {
-    row.style.opacity    = '0';
-    row.style.height     = '0';
-    row.style.overflow   = 'hidden';
-    row.style.transition = 'all 0.2s';
-    setTimeout(() => row.remove(), 220);
-  }
-  setTimeout(recalc, 250);
+function _doRemoveItem(sid,iid){
+ repository.archive('Antes de remover item',[{type:'month',month:state.currentMonth,year:state.currentYear,payload:snapshotCurrent()}]);
+ const sec=state.sections.find(s=>s.id===sid);if(sec)sec.items=sec.items.filter(i=>i.id!==iid);
+ document.querySelectorAll('.item-row').forEach(row=>{if(row.dataset.sid===sid&&row.dataset.iid===iid)row.remove();});
+ recalc();
 }
 
 // ── Move item between sections ──
@@ -397,10 +337,10 @@ export function buildItemRow(item, sid) {
     <button class="item-check-toggle" type="button" title="Marcar como conferido" aria-label="Marcar item como conferido">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </button>
-    <div class="item-label"><input class="label-input" type="text" placeholder="Nome do item" maxlength="120" value="${(item.label || '').replace(/"/g, '&quot;')}"></div>
+    <div class="item-label"><input class="label-input" type="text" placeholder="Nome do item" maxlength="120" value="${String(item.label || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;')}"></div>
     <div class="item-amount">
       <span class="prefix">R$</span>
-      <input class="amount-input" type="number" placeholder="—" step="0.01" min="0" max="9999999" value="${item.val || ''}">
+      <input class="amount-input" type="number" placeholder="—" step="0.01" min="0" max="9999999" value="${item.val === '' ? '' : (cents(item.val)/100).toFixed(2)}">
     </div>
     <div class="item-actions">
       <button class="move-btn" title="Mover para outra categoria" aria-label="Mover item para outra categoria">
@@ -413,11 +353,12 @@ export function buildItemRow(item, sid) {
   row.querySelector('.amount-input').addEventListener('input', e => {
     // Clamp negative values and scientific notation on the fly
     const raw = parseFloat(e.target.value);
-    if (!isNaN(raw) && raw < 0) e.target.value = '0';
+    if (Number.isFinite(raw) && (raw < 0 || raw > 9999999 || /\.\d{3,}/.test(e.target.value))) e.target.value = Math.min(9999999, Math.max(0, Math.round((raw+Number.EPSILON)*100)/100)).toFixed(2);
+    item.val = e.target.value;
     recalc();
   });
-  row.querySelector('.label-input').addEventListener('input', recalc);
-  row.querySelector('.clear-btn').addEventListener('click', () => { row.querySelector('.amount-input').value = ''; recalc(); });
+  row.querySelector('.label-input').addEventListener('input', e => { item.label=e.target.value; recalc(); });
+  row.querySelector('.clear-btn').addEventListener('click', () => { row.querySelector('.amount-input').value = ''; item.val=''; recalc(); });
   row.querySelector('.del-btn').addEventListener('click', () => removeItem(sid, item.id));
   row.querySelector('.move-btn').addEventListener('click', (e) => { e.stopPropagation(); openMovePopover(row, item.id, sid); });
   row.querySelector('.item-check-toggle').addEventListener('click', (e) => {
@@ -485,16 +426,10 @@ export function removeSection(secId) {
   ]);
 }
 
-function _doRemoveSection(secId) {
-  state.sections = state.sections.filter(s => s.id !== secId);
-  const el = document.querySelector(`.section[data-sid="${secId}"]`);
-  if (el) {
-    el.style.transition = 'opacity 0.2s, transform 0.2s';
-    el.style.opacity    = '0';
-    el.style.transform  = 'scale(0.97)';
-    setTimeout(() => el.remove(), 220);
-  }
-  setTimeout(recalc, 250);
+function _doRemoveSection(secId){
+ repository.archive('Antes de remover categoria',[{type:'month',month:state.currentMonth,year:state.currentYear,payload:snapshotCurrent()}]);
+ state.sections=state.sections.filter(s=>s.id!==secId);
+ document.querySelectorAll('.section').forEach(el=>{if(el.dataset.sid===secId)el.remove();});recalc();
 }
 
 // ── Build a section card ──
@@ -595,7 +530,7 @@ export function buildSection(sec) {
 
   div.querySelector('.section-del-btn').addEventListener('click', () => removeSection(sec.id));
   div.querySelector('.add-btn').addEventListener('click', () => {
-    const id   = 'i' + (state.nextId++);
+    const id   = newId();
     const sec2 = state.sections.find(s => s.id === sec.id);
     if (sec2) sec2.items.push({ id, label: '', val: '' });
     const newRow = buildItemRow({ id, label: '', val: '' }, sec.id);

@@ -135,3 +135,21 @@ values (
   true
 );
 ```
+
+## Revisão de confiabilidade — outubro de 2026
+
+- Valores calculados em centavos e parcelas de 2 a 120 meses com distribuição do resto. A soma é exatamente o valor da compra. Categorias personalizadas são criadas nos meses futuros.
+- As parcelas de uma compra são gravadas em uma transação. Versões antigas de outro dispositivo são bloqueadas e podem ser revisadas no indicador de salvamento.
+- Alterações são guardadas imediatamente em uma fila local por usuário e período, antes de aguardar a rede. A fila sobrevive à recarga e sincroniza meses e metas. Não limpe os dados do navegador enquanto houver alterações pendentes.
+- Abrir um mês não grava dados. A troca de período guarda primeiro as edições anteriores; uma falha de carregamento mantém o mês anterior.
+- CSV aceita campos com aspas, ponto e vírgula e quebras de linha, valores brasileiros, metadados de parcelas e proteção contra fórmulas de planilha. A opção de adicionar ignora itens idênticos e preserva rendas existentes.
+- Copiar o mês anterior preserva parcelas do mês atual e exclui parcelas da origem. A estrutura é copiada sem reutilizar parcelas já encerradas.
+- O indicador de salvamento abre os detalhes, permite baixar backup JSON completo e resolver divergências. As substituições por CSV/cópia e a resolução de divergências mantêm até 10 cópias locais de recuperação, incluídas no backup.
+- O SDK Supabase está fixado em 2.118.0 e servido localmente. O service worker guarda apenas os arquivos públicos do aplicativo; dados financeiros e respostas da API ficam fora desse cache. Acesso offline depende de já ter aberto o app e de uma sessão ainda válida.
+- Recuperação de senha possui formulário de conclusão. Sair encerra a sessão deste dispositivo.
+
+### Banco e testes
+
+Execute `supabase/reliability.sql` antes de publicar esta versão. A função `save_finance_batch` usa SECURITY INVOKER, mantém as políticas RLS, exige conta autenticada igual à conta de origem e faz todas as gravações de um lote ou nenhuma. O arquivo é idempotente. Não altera os lançamentos existentes.
+
+Rode `npm test`. Os testes cobrem centavos, virada de ano, categoria personalizada, CSV, importação repetida, fila offline, recarga, gravação em andamento, conflitos entre abas e isolamento de usuários. O banco foi validado com transações revertidas; os testes de interface usam dados fictícios. A pasta `.private-backup` nunca deve ser publicada.

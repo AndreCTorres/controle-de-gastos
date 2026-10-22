@@ -1,3 +1,4 @@
+import { cents } from '../finance.js';
 import { state } from '../state.js';
 import { fmt } from '../utils.js';
 import { updateSummary } from './chart.js';
@@ -7,11 +8,11 @@ import { scheduleSave } from '../persist.js';
 
 export function getTotalIncome() {
   let t = 0;
-  document.querySelectorAll('.income-input').forEach(inp => { t += parseFloat(inp.value) || 0; });
-  return t;
+  document.querySelectorAll('.income-input').forEach(inp => { t += cents(inp.value); });
+  return t / 100;
 }
 
-export function recalc() {
+export function recalc(save = true) {
   const renda = getTotalIncome();
   let totalDesp = 0;
   const secTotals = [];
@@ -21,8 +22,9 @@ export function recalc() {
     const sid = el.dataset.sid;
     const sec = state.sections.find(s => s.id === sid);
     let sub = 0;
-    el.querySelectorAll('.amount-input').forEach(inp => { sub += parseFloat(inp.value) || 0; });
-    totalDesp += sub;
+    el.querySelectorAll('.amount-input').forEach(inp => { sub += cents(inp.value); });
+    sub /= 100;
+    totalDesp = (Math.round(totalDesp * 100) + Math.round(sub * 100)) / 100;
     const tot = el.querySelector('.section-total');
     if (tot) tot.textContent = fmt(sub);
 
@@ -44,7 +46,7 @@ export function recalc() {
     secTotals.push({ id: sid, title: sec ? sec.title : sid, color: sec ? sec.color : '#999', total: sub });
   });
 
-  const saldo = renda - totalDesp;
+  const saldo = (Math.round(renda * 100) - Math.round(totalDesp * 100)) / 100;
   document.getElementById('stat-renda').textContent     = fmt(renda);
   document.getElementById('stat-despesas').textContent  = fmt(totalDesp);
   const ss = document.getElementById('stat-saldo');
@@ -53,5 +55,5 @@ export function recalc() {
 
   updateSummary(secTotals, renda, totalDesp);
   window.updateCheckModeUI?.();
-  scheduleSave();
+  if (save) scheduleSave();
 }

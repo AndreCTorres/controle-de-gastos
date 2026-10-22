@@ -1,0 +1,2 @@
+# Vendored SDK is kept exactly as distributed upstream.
+src/vendor/*.js -whitespace

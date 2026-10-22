@@ -40,7 +40,7 @@ window.updateCheckModeUI = function updateCheckModeUI() {
     const sec = state.sections.find(s => s.id === row.dataset.sid);
     const item = sec?.items.find(i => i.id === row.dataset.iid);
     row.classList.toggle('checked', !!item?.checked);
-    row.setAttribute('aria-checked', item?.checked ? 'true' : 'false');
+    row.querySelector('.item-check-toggle')?.setAttribute('aria-pressed',item?.checked?'true':'false');
   });
 
   updateSectionCheckCounters();
