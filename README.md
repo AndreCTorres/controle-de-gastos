@@ -195,3 +195,5 @@ Referências: [WCAG — contraste de texto](https://www.w3.org/WAI/WCAG22/Unders
 Execute `npm ci`, `npx playwright install chromium` e `npm run test:browser` para a verificação de interface. Playwright é apenas uma dependência de desenvolvimento.
 
 Esta revisão visual faz parte do histórico interno e não gera um pop-up. O script `supabase/releases/2026-11-editorial-correction.sql` retira o aviso de ajustes visuais e concentra o comunicado existente de novembro nas novas capacidades: temas e nomes personalizados. Preserva o ID e a data do comunicado funcional.
+
+A seta dos seletores usa um chevron SVG de tamanho fixo, alinhado ao centro e com rotação ao abrir a lista. O desenho não depende da fonte instalada no navegador. Esta correção visual fica somente no histórico interno.

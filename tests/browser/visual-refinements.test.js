@@ -44,13 +44,13 @@ test('theme menu supports mouse, keyboard, cancel, persistence and system change
  await trigger.click();await page.screenshot({path:'.review/seletor-tema-claro-ajustado.png'});await trigger.press('Escape');
  await trigger.press('Enter');await trigger.press('End');await trigger.press('Escape');assert.equal(await menu(page).count(),0);assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'light');
  await trigger.press('Enter');await trigger.press('End');await trigger.press('Enter');assert.equal(await page.evaluate(()=>document.documentElement.dataset.theme),'dark');
- await page.reload();assert.equal(await trigger.textContent(),'Escuro⌄');
+ await page.reload();assert.equal(await trigger.locator('.select-value').textContent(),'Escuro');
  await trigger.press('s');await trigger.press('Tab');assert.equal(await page.locator('[data-theme-select]').first().inputValue(),'system');
  await page.emulateMedia({colorScheme:'light'});await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');
  await page.emulateMedia({colorScheme:'dark'});await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');
  const second=await page.context().newPage();await second.route('https://fonts.googleapis.com/**',r=>r.abort());await second.goto(base);
  await second.locator('.auth-theme [role="combobox"]').click();await menu(second).getByRole('option',{name:'Claro',exact:true}).click();
- await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');assert.equal(await trigger.textContent(),'Claro⌄');
+ await page.waitForFunction(()=>document.documentElement.dataset.theme==='light');assert.equal(await trigger.locator('.select-value').textContent(),'Claro');
  await second.locator('.auth-theme [role="combobox"]').click();await menu(second).getByRole('option',{name:'Sistema',exact:true}).click();
  await page.waitForFunction(()=>document.documentElement.dataset.theme==='dark');await second.close();
  await trigger.click();await menu(page).getByRole('option',{name:'Escuro',exact:true}).hover();
@@ -62,7 +62,9 @@ test('only the pencil opens naming; scope menu stays within the dialog and Escap
  const row=page.locator('.item-row[data-iid="bed"]');
  await row.locator('.label-input').click();assert.equal(await page.locator('#invoiceNameModal').evaluate(el=>el.classList.contains('open')),false);
  await row.getByRole('button',{name:'Editar nome de'}).click();
- const scope=page.locator('#invoiceNameForm [role="combobox"]');await scope.click();
+ const scope=page.locator('#invoiceNameForm [role="combobox"]');
+ await page.locator('#invoiceNameForm').screenshot({path:'.review/seletor-nome-icone.svg.png',animations:'disabled'});
+ await scope.click();
  assert.equal(await page.locator('#invoiceNameModal .select-menu:not([hidden])').count(),1);
  await scope.press('Escape');assert.equal(await menu(page).count(),0);assert.equal(await page.locator('#invoiceNameModal').evaluate(el=>el.classList.contains('open')),true);
  await scope.click();await menu(page).getByRole('option',{name:'Só neste lançamento',exact:true}).click();assert.equal(await page.locator('#invoiceNameScope').inputValue(),'once');
@@ -77,6 +79,7 @@ test('only the pencil opens naming; scope menu stays within the dialog and Escap
 });
 test('amount hierarchy has readable contrast and distinguishes refund from a negative balance',async t=>{
  const page=await pageFor(t);await renderFixture(page);
+ await page.locator('.header-right').screenshot({path:'.review/seletor-tema-icone.svg.png',animations:'disabled'});
  const styles=await page.evaluate(()=>{
   const css=el=>getComputedStyle(el),q=selector=>document.querySelector(selector);
   const normal=css(q('[data-iid="bed"] .amount-input')).color;

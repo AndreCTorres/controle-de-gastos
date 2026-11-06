@@ -1281,7 +1281,8 @@ body.check-mode-active .item-label input,body.check-mode-active .item-amount inp
 .select-trigger[aria-expanded="true"]{border-color:var(--primary)}
 .select-trigger:disabled{opacity:.5;cursor:default}
 .select-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.select-arrow{color:var(--muted);font-size:17px;flex-shrink:0;line-height:1}
+.select-arrow{display:block;width:16px;height:16px;color:var(--muted);flex:0 0 16px;transition:transform .16s ease}
+.select-trigger[aria-expanded="true"] .select-arrow{transform:rotate(180deg)}
 .select-menu{position:fixed;z-index:700;max-height:280px;padding:5px;overflow:auto;overscroll-behavior:contain;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);box-shadow:0 10px 30px #050A1240;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
 .select-menu[hidden]{display:none}
 .select-option{position:relative;padding:10px 32px 10px 11px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;line-height:1.4;cursor:pointer;overflow-wrap:anywhere}

@@ -1,4 +1,4 @@
-const CACHE='cgastos-shell-20261106-visual-refinements1';
+const CACHE='cgastos-shell-20261106-visual-refinements2';
 const ASSETS=["/js/ui/select.js","/js/theme.js","/js/invoice-names.js","/js/ui/invoice-names.js","/js/app.js","/js/auth.js","/js/config.js","/js/constants.js","/js/db.js","/js/modals/copy.js","/js/modals/goals.js","/js/modals/import.js","/js/modals/newSection.js","/js/modals/parcel.js","/js/modals/yearReport.js","/js/persist.js","/js/state.js","/js/ui/chart.js","/js/ui/checkMode.js","/js/ui/feedback.js","/js/ui/income.js","/js/ui/modal.js","/js/ui/offline.js","/js/ui/recalc.js","/js/ui/sections.js","/js/ui/toast.js","/js/utils.js","/style.css","/","/index.html","/js/finance.js","/js/repository.js","/js/csv.js","/vendor/supabase-2.118.0.js","/js/invoice-model.js","/js/ui/invoices.js"];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener('activate',event=>event.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('cgastos-shell-')&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()])));
