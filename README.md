@@ -125,7 +125,7 @@ A cada `git push` na branch `main` o Netlify atualiza o site automaticamente.
 
 ## Publicar uma notificação de atualização
 
-Cada versão com mudanças visíveis deve atualizar o comunicado em português no pop-up. Mantenha um script de rascunho e outro de publicação em `supabase/releases/`, com um título que identifique a versão. O conteúdo deve explicar o benefício e como usar a novidade.
+O pop-up anuncia **funcionalidades novas**: o que o usuário pode fazer agora que antes não conseguia, com exemplos e indicação de onde usar. Correções de bugs, retoques visuais, bordas, contraste e melhorias de manutenção ficam no histórico interno; não geram um novo aviso. Mantenha um script de rascunho e outro de publicação em `supabase/releases/` somente para versões com novas capacidades.
 
 Para novembro de 2026:
 
@@ -134,7 +134,7 @@ Para novembro de 2026:
 3. Execute `supabase/releases/2026-11-publish.sql` para ativar o comunicado. O script define a data real da publicação e não republica se for executado novamente.
 4. Confira o pop-up no primeiro acesso de uma conta que ainda não confirmou essa versão, em ambos os temas e no celular. Após “Entendido”, o aviso não deve reaparecer naquele navegador. “Novidades do app”, no rodapé, permite consultá-lo novamente.
 
-O código usa a identidade capturada no início da consulta para não exibir ou confirmar um aviso na conta errada. Se o armazenamento do navegador estiver bloqueado, a confirmação ainda vale durante a sessão. Nas próximas versões, crie um novo registro: editar um aviso já lido não o apresenta novamente.
+O código usa a identidade capturada no início da consulta para não exibir ou confirmar um aviso na conta errada. Se o armazenamento do navegador estiver bloqueado, a confirmação ainda vale durante a sessão. Nas próximas versões com novas funcionalidades, crie um novo registro. Ajustes editoriais mantêm o ID e a data do comunicado existente, sem forçar outra notificação.
 
 ## Revisão de confiabilidade — outubro de 2026
 
@@ -194,4 +194,4 @@ Referências: [WCAG — contraste de texto](https://www.w3.org/WAI/WCAG22/Unders
 
 Execute `npm ci`, `npx playwright install chromium` e `npm run test:browser` para a verificação de interface. Playwright é apenas uma dependência de desenvolvimento.
 
-O comunicado desta revisão fica em `supabase/releases/2026-11-visual-draft.sql`. Depois de publicar e verificar o frontend, ative com `supabase/releases/2026-11-visual-publish.sql`. Não altere o ID do comunicado anterior.
+Esta revisão visual faz parte do histórico interno e não gera um pop-up. O script `supabase/releases/2026-11-editorial-correction.sql` retira o aviso de ajustes visuais e concentra o comunicado existente de novembro nas novas capacidades: temas e nomes personalizados. Preserva o ID e a data do comunicado funcional.
