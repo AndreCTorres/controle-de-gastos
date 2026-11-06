@@ -42,7 +42,7 @@ window.openParcelModal = function() {
     const tag = document.createElement('span');
     const safeColor = /^#[0-9A-Fa-f]{3,8}$/.test(sec.color || '') ? sec.color : '#888';
     const safeBg    = /^#[0-9A-Fa-f]{3,8}$/.test(sec.bg    || '') ? sec.bg    : '#eee';
-    tag.style.cssText = `display:inline-block;background:${safeBg};color:${safeColor};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px`;
+    tag.style.cssText = `--category-color:${safeColor};display:inline-block;background:${safeBg};color:${safeColor};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px`;
     tag.textContent = sec.title;
 
     labelWrap.appendChild(tag);

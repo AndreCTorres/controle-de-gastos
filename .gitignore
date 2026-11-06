@@ -57,3 +57,6 @@ build/
 
 __pycache__/
 *.pyc
+
+# Supabase CLI local cache
+supabase/.temp/

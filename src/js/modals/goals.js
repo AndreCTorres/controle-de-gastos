@@ -29,6 +29,7 @@ window.openGoalsModal = async function() {
     const safeColor = /^#[0-9A-Fa-f]{3,8}$/.test(sec.color || '') ? sec.color : '#888';
     const safeBg    = /^#[0-9A-Fa-f]{3,8}$/.test(sec.bg    || '') ? sec.bg    : '#eee';
     tag.style.background = safeBg;
+    tag.style.setProperty('--category-color',safeColor);
     tag.style.color = safeColor;
     tag.textContent = sec.title;
     labelDiv.appendChild(tag);

@@ -285,6 +285,7 @@ export function openMovePopover(rowEl, iid, fromSid) {
     btn.className = 'move-popover-option';
     const tag = document.createElement('span');
     tag.className = 'move-popover-tag';
+    tag.style.setProperty('--category-color',safeColor);
     tag.style.color      = safeColor;
     tag.style.background = safeBg;
     tag.textContent = sec.title;
@@ -352,6 +353,18 @@ export function buildItemRow(item, sid) {
     </div>`;
 
   if(item.invoiceId){const value=row.querySelector('.amount-input');value.readOnly=true;value.title='Valor do PDF da fatura';for(const selector of ['.clear-btn','.del-btn']){row.querySelector(selector).disabled=true;row.querySelector(selector).title='Para remover estes dados, use Desfazer importação';}if(item.needsReview&&!item.categoryConfirmed){const badge=document.createElement('span');badge.className='invoice-review-tag';badge.textContent='Revisar';row.querySelector('.item-label').append(badge);}}
+  if (item.invoiceId && item.invoicePosition != null) {
+    const input = row.querySelector('.label-input');
+    input.readOnly = true;
+    input.title = 'Editar nome e escolher se ele vale nas próximas faturas';
+    input.addEventListener('click', () => window.openInvoiceName?.(item.id));
+    const rename = row.querySelector('.clear-btn');
+    rename.disabled = false; rename.className = 'invoice-name-btn';
+    rename.textContent = '✎'; rename.title = 'Editar nome da compra';
+    rename.setAttribute('aria-label', 'Editar nome de ' + item.label);
+    rename.addEventListener('click', () => window.openInvoiceName?.(item.id));
+    row.querySelector('.del-btn').hidden = true;
+  }
   row.querySelector('.amount-input').addEventListener('input', e => {
     // Clamp negative values and scientific notation on the fly
     const raw = parseFloat(e.target.value);
@@ -360,7 +373,7 @@ export function buildItemRow(item, sid) {
     recalc();
   });
   row.querySelector('.label-input').addEventListener('input', e => { item.label=e.target.value; recalc(); });
-  row.querySelector('.clear-btn').addEventListener('click', () => { row.querySelector('.amount-input').value = ''; item.val=''; recalc(); });
+  row.querySelector('.clear-btn')?.addEventListener('click', () => { row.querySelector('.amount-input').value = ''; item.val=''; recalc(); });
   row.querySelector('.del-btn').addEventListener('click', () => removeItem(sid, item.id));
   row.querySelector('.move-btn').addEventListener('click', (e) => { e.stopPropagation(); openMovePopover(row, item.id, sid); });
   row.querySelector('.item-check-toggle').addEventListener('click', (e) => {
@@ -445,7 +458,7 @@ export function buildSection(sec) {
   div.innerHTML = `
     <div class="section-head">
       <div class="section-head-title-row">
-        <span class="section-tag" style="color:${safeColor};background:${safeBg}"></span>
+        <span class="section-tag" style="--category-color:${safeColor};color:${safeColor};background:${safeBg}"></span>
       </div>
       <div class="section-goal-indicator"></div>
       <div class="section-head-bottom">

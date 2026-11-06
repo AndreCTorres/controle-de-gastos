@@ -35,7 +35,7 @@ export function parseImportCsv(raw){
     let metadata={};
     if(fields[2]){
       if(!fields[2].startsWith('meta:'))throw Error('Coluna extra desconhecida na linha '+(index+1)+'.');
-      try{const source=JSON.parse(fields[2].slice(5));for(const key of ['id','parcel','purchaseId','parcelNumber','parcelCount','checked','source','invoiceId','invoicePosition','transactionDate','merchant','merchantKey','cardLast4','sourceCardLast4','originalAmountCents','invoiceKind','needsReview','categoryOrigin','categoryConfirmed'])if(source[key]!=null)metadata[key]=source[key];}catch{throw Error('Metadados inválidos na linha '+(index+1)+'.');}
+      try{const source=JSON.parse(fields[2].slice(5));for(const key of ['id','parcel','purchaseId','parcelNumber','parcelCount','checked','source','invoiceId','invoicePosition','transactionDate','merchant','merchantKey','cardLast4','sourceCardLast4','originalAmountCents','invoiceKind','needsReview','categoryOrigin','categoryConfirmed','originalLabel','friendlyName','nameScope'])if(source[key]!=null)metadata[key]=source[key];}catch{throw Error('Metadados inválidos na linha '+(index+1)+'.');}
     }
     section.items.push({...metadata,id:typeof metadata.id==='string'?metadata.id:newId(),label,val});
   }

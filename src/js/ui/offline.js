@@ -68,7 +68,8 @@ window.downloadFullBackup=async()=>{
     const audit=await repository.client.from('invoice_imports').select('*').eq('user_id',state.userId);if(audit.error)throw audit.error;
     const rules=await repository.client.from('invoice_category_rules').select('*').eq('user_id',state.userId);if(rules.error)throw rules.error;
     const preferences=await repository.client.from('invoice_settings').select('*').eq('user_id',state.userId);if(preferences.error)throw preferences.error;
-    const backup={invoices:audit.data,categoryRules:rules.data,invoiceSettings:preferences.data,format:'controle-de-gastos',version:2,exportedAt:new Date().toISOString(),months,goals,pending:repository.groups(),recovery:repository.read('cgastos_v2_recovery_'+state.userId,[])};
+    const names=await repository.client.from('invoice_name_rules').select('*').eq('user_id',state.userId);if(names.error)throw names.error;
+    const backup={nameRules:names.data,invoices:audit.data,categoryRules:rules.data,invoiceSettings:preferences.data,format:'controle-de-gastos',version:2,exportedAt:new Date().toISOString(),months,goals,pending:repository.groups(),recovery:repository.read('cgastos_v2_recovery_'+state.userId,[])};
     const link=document.createElement('a');link.href=URL.createObjectURL(new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}));link.download='controle-gastos-backup-'+new Date().toISOString().slice(0,10)+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
   }catch{window.showToast('Não foi possível baixar o backup completo. Verifique a conexão.','error');}
   finally{btn.disabled=false;}

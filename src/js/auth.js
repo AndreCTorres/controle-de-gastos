@@ -186,7 +186,7 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     btn.disabled        = false;
     btn.textContent     = 'Criar conta';
   } else {
-    errEl.style.cssText = 'display:block;background:#E8F5EE;color:var(--green)';
+    errEl.style.cssText = 'display:block;background:var(--success-bg);color:var(--green)';
     errEl.textContent   = 'Conta criada! Verifique seu e-mail para confirmar o cadastro.';
     btn.textContent     = 'E-mail enviado ✓';
   }
@@ -212,7 +212,7 @@ document.getElementById('forgotForm').addEventListener('submit', async (e) => {
     btn.disabled        = false;
     btn.textContent     = 'Enviar link';
   } else {
-    errEl.style.cssText = 'display:block;background:#E8F5EE;color:var(--green)';
+    errEl.style.cssText = 'display:block;background:var(--success-bg);color:var(--green)';
     errEl.textContent   = 'Link enviado! Verifique seu e-mail.';
     btn.textContent     = 'E-mail enviado ✓';
   }

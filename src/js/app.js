@@ -23,6 +23,7 @@ import './modals/import.js';
 import './modals/yearReport.js';
 import { initFeedbackWidget } from './ui/feedback.js';
 import './ui/checkMode.js';
+import './ui/invoice-names.js';
 
 // Fallback for tabs that still have an older module graph cached during local development.
 window.toggleCheckMode ??= function() {
@@ -250,7 +251,10 @@ export async function initApp(user) {
 
 // ── Update notification ──
 
-async function checkForUpdates(user) {
+const updatesSeenThisSession = new Map();
+export async function checkForUpdates(user, { force = false } = {}) {
+  const userId = user?.id;
+  if (!userId || state.userId !== userId) return;
   try {
     const { data, error } = await supabase
       .from('app_updates')
@@ -260,10 +264,15 @@ async function checkForUpdates(user) {
       .limit(1)
       .maybeSingle();
 
-    if (error || !data) return;
-
-    const seenId = localStorage.getItem(`cgastos_last_update_seen_${state.userId}`);
-    if (seenId === data.id) return;
+    if (state.userId !== userId) return;
+    if (error || !data) {
+      if (force) window.showToast(error ? 'Não foi possível carregar as novidades. Tente novamente com conexão.' : 'Nenhuma novidade publicada ainda.', 'info');
+      return;
+    }
+    let seenId = updatesSeenThisSession.get(userId);
+    if (!seenId) { try { seenId = localStorage.getItem(`cgastos_last_update_seen_${userId}`); } catch {} }
+    if (!force && seenId === data.id) return;
+    if (document.getElementById('updateModal').classList.contains('open')) return;
 
     const titleEl = document.createElement('p');
     titleEl.style.cssText = 'font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px';
@@ -275,14 +284,16 @@ async function checkForUpdates(user) {
     container.appendChild(buildUpdateBody(data.body || ''));
 
     openModal('updateModal');
-    document.getElementById('updateModalBtn').addEventListener('click', async () => {
+    document.getElementById('updateModalBtn').onclick = () => {
       closeModal('updateModal');
-      localStorage.setItem(`cgastos_last_update_seen_${state.userId}`, data.id);
-    }, { once: true });
+      if (state.userId !== userId) return;
+      updatesSeenThisSession.set(userId, data.id);
+      try { localStorage.setItem(`cgastos_last_update_seen_${userId}`, data.id); } catch {}
+    };
   } catch (e) { /* silently ignore */ }
 }
 
-function buildUpdateBody(body) {
+export function buildUpdateBody(body) {
   const lines = body
     .split(/\r?\n/)
     .map(line => line.trim())
@@ -322,6 +333,8 @@ function buildUpdateBody(body) {
   bodyEl.textContent = body;
   return bodyEl;
 }
+
+window.openLatestUpdates = () => checkForUpdates({ id: state.userId }, { force: true });
 
 // ── Welcome modal ──
 

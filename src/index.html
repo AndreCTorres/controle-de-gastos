@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Controle de Gastos</title>
+<meta name="theme-color" content="#F2EFE9">
+<script src="js/theme.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233D5A80' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12V7H5a2 2 0 0 1 0-4h14v4'/%3E%3Cpath d='M3 5v14a2 2 0 0 0 2 2h16v-5'/%3E%3Cpath d='M18 12a2 2 0 0 0 0 4h4v-4z'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
@@ -20,6 +22,7 @@
         <path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>
       </svg>
     </div>
+    <div class="auth-theme"><label class="theme-picker"><span>Tema</span><select data-theme-select aria-label="Tema de cores"><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select></label></div>
     <h1 class="auth-title">Controle de Gastos</h1>
     <p class="auth-sub">Finanças pessoais, simples e eficiente.</p>
 
@@ -98,6 +101,7 @@
     <div class="header-sub">Finanças pessoais</div>
   </div>
   <div class="header-right">
+    <label class="theme-picker"><span>Tema</span><select data-theme-select aria-label="Tema de cores"><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select></label>
     <div class="month-chip" id="monthChip" role="button" tabindex="0" aria-expanded="false" aria-label="Escolher mês" onclick="toggleMonthDropdown()">
       <span class="month-chip-label">Mês</span>
       <span class="month-chip-value" id="monthChipValue">—</span>
@@ -199,6 +203,8 @@
     <span>Controle de Gastos Pessoais</span>
     <span class="footer-sep">·</span>
     <span>Todos os direitos reservados</span>
+    <span class="footer-sep">·</span>
+    <button type="button" class="release-notes-link" onclick="openLatestUpdates()">Novidades do app</button>
   </div>
 </footer>
 
@@ -576,7 +582,7 @@
 <div class="modal-overlay" id="updateModal" role="dialog" aria-modal="true" aria-labelledby="updateModalHeading">
   <div class="modal" style="max-width:440px">
     <div class="modal-header">
-      <div class="modal-title" id="updateModalHeading">🚀 Novidade no app</div>
+      <div class="modal-title" id="updateModalHeading">Novidades do app</div>
     </div>
     <div class="modal-body">
       <div id="updateContent"></div>
@@ -603,6 +609,24 @@
   <div class="modal-body"><p id="invoiceReviewCount" class="invoice-details"></p><label class="invoice-review-filter"><input id="invoiceReviewAll" type="checkbox"> Mostrar todos os lançamentos</label><div id="invoiceReviewBody"></div></div>
   <div class="modal-footer"><button class="modal-btn-cancel" onclick="closeInvoiceReview()">Fechar</button><button class="modal-btn-primary" id="invoiceReviewSave" onclick="confirmInvoiceReview()">Confirmar exibidos</button></div>
  </div>
+</div>
+
+<div class="modal-overlay" id="invoiceNameModal" role="dialog" aria-modal="true" aria-labelledby="invoiceNameTitle">
+  <form class="modal" id="invoiceNameForm">
+    <div class="modal-header"><h2 class="modal-title" id="invoiceNameTitle">Nome da compra</h2><button type="button" class="modal-close" aria-label="Fechar" onclick="closeInvoiceName()">×</button></div>
+    <div class="modal-body invoice-name-body">
+      <div><span class="field-caption">Na fatura</span><p id="invoiceNameOriginal" class="invoice-details"></p></div>
+      <label class="name-field">Como você quer chamar?<input id="invoiceNameInput" maxlength="100" placeholder="Ex.: Cama do quarto" autocomplete="off"></label>
+      <label class="name-field">Aplicar este nome<select id="invoiceNameScope">
+        <option value="once">Só neste lançamento</option>
+        <option value="purchase">Nesta compra e nas próximas parcelas</option>
+        <option value="merchant">Nas próximas compras deste estabelecimento e cartão</option>
+      </select></label>
+      <p class="invoice-details">O número da parcela continua automático. O texto original e os valores da fatura são preservados. Deixe o nome vazio para voltar ao original e remover a regra escolhida.</p>
+      <p id="invoiceNameError" class="auth-error" role="alert"></p>
+    </div>
+    <div class="modal-footer"><button type="button" class="modal-btn-cancel" onclick="closeInvoiceName()">Cancelar</button><button class="modal-btn-primary" id="invoiceNameSave" type="submit">Salvar nome</button></div>
+  </form>
 </div>
 
 <!-- Toast -->

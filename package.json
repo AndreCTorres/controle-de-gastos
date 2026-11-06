@@ -16,5 +16,8 @@
     "pessoal"
   ],
   "author": "André Torres",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14"
+  }
 }

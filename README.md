@@ -125,16 +125,16 @@ A cada `git push` na branch `main` o Netlify atualiza o site automaticamente.
 
 ## Publicar uma notificação de atualização
 
-Insira um registro na tabela `app_updates` com `published = true`. Cada usuário verá o modal uma única vez:
+Cada versão com mudanças visíveis deve atualizar o comunicado em português no pop-up. Mantenha um script de rascunho e outro de publicação em `supabase/releases/`, com um título que identifique a versão. O conteúdo deve explicar o benefício e como usar a novidade.
 
-```sql
-insert into public.app_updates (title, body, published)
-values (
-  'Título da novidade',
-  'Descrição do que foi adicionado ou melhorado.',
-  true
-);
-```
+Para novembro de 2026:
+
+1. Execute `supabase/releases/2026-11-draft.sql` para registrar o comunicado com `published=false`; esse rascunho não aparece aos usuários.
+2. Aplique a migração de nomes e publique/verifique o frontend.
+3. Execute `supabase/releases/2026-11-publish.sql` para ativar o comunicado. O script define a data real da publicação e não republica se for executado novamente.
+4. Confira o pop-up no primeiro acesso de uma conta que ainda não confirmou essa versão, em ambos os temas e no celular. Após “Entendido”, o aviso não deve reaparecer naquele navegador. “Novidades do app”, no rodapé, permite consultá-lo novamente.
+
+O código usa a identidade capturada no início da consulta para não exibir ou confirmar um aviso na conta errada. Se o armazenamento do navegador estiver bloqueado, a confirmação ainda vale durante a sessão. Nas próximas versões, crie um novo registro: editar um aviso já lido não o apresenta novamente.
 
 ## Revisão de confiabilidade — outubro de 2026
 
@@ -169,3 +169,16 @@ A rotina mensal pode usar as conexões existentes de Gmail e Supabase em uma tar
 Como alternativa local, instale `scripts/requirements.txt` e execute `python scripts/nubank_pdf.py caminho/da/fatura.pdf resultado.json`. PDFs e JSONs financeiros devem ficar fora de `src`, de commits e de logs públicos.
 
 Validação: `npm test` e `python -m unittest discover -s tests -p test_nubank_pdf.py`. Os testes usam somente dados fictícios.
+
+
+## Nomes de compras e temas
+
+O lápis ao lado de um lançamento importado abre **Nome da compra**. O nome amigável pode valer só para aquele lançamento, para a mesma compra parcelada ou para futuras compras no mesmo estabelecimento e cartão. O app mantém o texto original para consulta e acrescenta o número da parcela automaticamente: por exemplo, `Cama (2/12)`.
+
+A identificação da compra usa estabelecimento, cartão, valor da parcela, quantidade de parcelas e ciclo inicial da fatura. Outra compra na mesma loja não recebe esse nome por engano. Quando duas compras têm exatamente a mesma identificação, o app exige edição individual ou uma regra explícita para o estabelecimento. Créditos e estornos não herdam nomes de compras. O nome vazio restaura o original e remove a regra que havia sido escolhida. Meses anteriores não são reescritos.
+
+**Antes de publicar o frontend**, aplique `supabase/migrations/20261106180948_invoice_friendly_names.sql` no mesmo banco, depois dos scripts de faturas existentes. A migração adiciona regras isoladas por usuário e gatilhos ao salvamento/importação; a automação mensal existente passa a respeitá-las sem mudar seu procedimento. Não reimporte faturas antigas para ativar os nomes. A migração não altera lançamentos históricos. O backup completo inclui `nameRules`, e o CSV preserva os metadados de nome de cada item.
+
+O seletor **Tema** está no login e no cabeçalho: Claro, Escuro ou Sistema. A preferência fica neste navegador, sincroniza entre abas e é aplicada antes da página aparecer. O tema escuro adapta superfícies, campos, categorias, gráficos, avisos e modais. A impressão usa a paleta clara.
+
+Para validar: `npm ci && npm test` e `python -m unittest discover -s tests -p test_nubank_pdf.py`. Os testes de nomes executam a migração em um Postgres local em memória (PGlite), com dados fictícios e RLS; não acessam o banco remoto. PGlite é apenas uma dependência de desenvolvimento, sem mudanças nas dependências do site publicado.

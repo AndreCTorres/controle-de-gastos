@@ -12,9 +12,9 @@ export function drawDonut(slices) {
   const total = slices.reduce((a, s) => a + s.val, 0);
   if (total === 0) {
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
-    ctx.fillStyle = '#E8E4DC'; ctx.fill();
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim(); ctx.fill();
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim(); ctx.fill();
     return;
   }
   let angle = -Math.PI / 2;
@@ -30,7 +30,7 @@ export function drawDonut(slices) {
     angle += sweep;
   });
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--card').trim(); ctx.fill();
   ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.strokeStyle = 'rgba(0,0,0,0.04)'; ctx.lineWidth = 1; ctx.stroke();
 }
@@ -125,3 +125,8 @@ export function updateSummary(secTotals, renda, totalDesp) {
     fillEl.style.background = safeColor;
   });
 }
+
+const redrawDonut = () => drawDonut(state.sections.map(s => ({color:s.color,val:s.items.reduce((sum,i)=>sum+Number(i.val || 0),0)})));
+window.addEventListener('themechange', redrawDonut);
+window.addEventListener('beforeprint', redrawDonut);
+window.addEventListener('afterprint', redrawDonut);

@@ -178,6 +178,7 @@ window.openYearReport = async function() {
     tag.className = 'yr-sec-tag';
     const safeColor = /^#[0-9A-Fa-f]{3,8}$/.test(meta?.color || '') ? meta.color : '#888';
     tag.style.background = safeColor + '22';
+    tag.style.setProperty('--category-color',safeColor);
     tag.style.color = safeColor;
     tag.textContent = meta?.title || sid;
     tdCat.appendChild(tag);
