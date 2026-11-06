@@ -17,6 +17,7 @@ window.openInvoiceName = function(itemId) {
   scope.querySelector('[value="merchant"]').disabled = !invoiceNameKey(item, state.currentYear, state.currentMonth, 'merchant');
   scope.value = item.nameScope ?? (scope.querySelector('[value="purchase"]').disabled ? 'once' : 'purchase');
   if (scope.selectedOptions[0]?.disabled) scope.value = 'once';
+  scope.dispatchEvent(new Event('select:sync'));
   document.getElementById('invoiceNameError').textContent = '';
   openModal('invoiceNameModal', '#invoiceNameInput');
   document.getElementById('invoiceNameInput').focus();

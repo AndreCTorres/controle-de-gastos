@@ -356,14 +356,18 @@ export function buildItemRow(item, sid) {
   if (item.invoiceId && item.invoicePosition != null) {
     const input = row.querySelector('.label-input');
     input.readOnly = true;
-    input.title = 'Editar nome e escolher se ele vale nas próximas faturas';
-    input.addEventListener('click', () => window.openInvoiceName?.(item.id));
+    input.title = item.label;
+    input.setAttribute('aria-label', 'Nome da compra: ' + item.label);
     const rename = row.querySelector('.clear-btn');
     rename.disabled = false; rename.className = 'invoice-name-btn';
     rename.textContent = '✎'; rename.title = 'Editar nome da compra';
     rename.setAttribute('aria-label', 'Editar nome de ' + item.label);
     rename.addEventListener('click', () => window.openInvoiceName?.(item.id));
     row.querySelector('.del-btn').hidden = true;
+  }
+  if (item.invoiceId && cents(item.val) < 0) {
+    row.querySelector('.amount-input').title = 'Crédito ou estorno: reduz as despesas da fatura';
+    row.querySelector('.amount-input').setAttribute('aria-label', 'Crédito ou estorno de ' + item.label);
   }
   row.querySelector('.amount-input').addEventListener('input', e => {
     // Clamp negative values and scientific notation on the fly

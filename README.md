@@ -182,3 +182,16 @@ A identificação da compra usa estabelecimento, cartão, valor da parcela, quan
 O seletor **Tema** está no login e no cabeçalho: Claro, Escuro ou Sistema. A preferência fica neste navegador, sincroniza entre abas e é aplicada antes da página aparecer. O tema escuro adapta superfícies, campos, categorias, gráficos, avisos e modais. A impressão usa a paleta clara.
 
 Para validar: `npm ci && npm test` e `python -m unittest discover -s tests -p test_nubank_pdf.py`. Os testes de nomes executam a migração em um Postgres local em memória (PGlite), com dados fictícios e RLS; não acessam o banco remoto. PGlite é apenas uma dependência de desenvolvimento, sem mudanças nas dependências do site publicado.
+
+
+## Ajustes visuais — novembro de 2026
+
+Os valores comuns usam cor neutra para não parecerem ações. Totais das categorias usam o texto principal, com contraste maior. Verde identifica créditos/estornos que reduzem as despesas; saldo negativo mantém vermelho. O nome de um item importado é somente leitura; o lápis abre a edição.
+
+Os campos de seleção usam um componente comum em `src/js/ui/select.js`, preservando o campo de formulário original. A lista tem bordas arredondadas, opções desabilitadas, controle de foco e posicionamento dentro da janela. Teclado: Enter/Espaço abre e confirma, setas navegam, Home/End vão aos extremos, digitação busca opções e Escape cancela sem fechar o modal. Tab confirma e segue para o próximo campo. A preferência de tema continua sincronizada entre abas.
+
+Referências: [WCAG — contraste de texto](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) e [WAI-ARIA — combobox de seleção](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/examples/combobox-select-only/). Os testes verificam teclado, clique, seletores dinâmicos, crédito versus saldo negativo, contraste, persistência do tema e limites no celular. Não substituem testes com leitores de tela.
+
+Execute `npm ci`, `npx playwright install chromium` e `npm run test:browser` para a verificação de interface. Playwright é apenas uma dependência de desenvolvimento.
+
+O comunicado desta revisão fica em `supabase/releases/2026-11-visual-draft.sql`. Depois de publicar e verificar o frontend, ative com `supabase/releases/2026-11-visual-publish.sql`. Não altere o ID do comunicado anterior.

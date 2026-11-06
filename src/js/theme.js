@@ -9,7 +9,7 @@
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#111923' : '#F2EFE9');
-    document.querySelectorAll('[data-theme-select]').forEach(select => { select.value = preference; });
+    document.querySelectorAll('[data-theme-select]').forEach(select => { select.value = preference; select.dispatchEvent(new Event('select:sync')); });
     window.dispatchEvent(new CustomEvent('themechange'));
   }
   apply();
@@ -23,6 +23,7 @@
         apply();
       });
     });
+    apply();
   });
   media.addEventListener('change', () => { if (preference === 'system') apply(); });
   window.addEventListener('storage', event => {
